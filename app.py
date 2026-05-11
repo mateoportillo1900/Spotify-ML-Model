@@ -170,6 +170,26 @@ def train_model():
     }).sort_values("Importance", ascending=False)
     return pipe, fi, yte, ypred, y
 
+@st.cache_resource
+def train_audio_model():
+    """Audio-only Random Forest — no artist features so the predictor reflects pure sound."""
+    df = load_data()
+    counts = df["top_genre"].value_counts()
+    df = df[~df["top_genre"].isin(counts[counts < 5].index)]
+    X  = df[FEATURES]
+    y  = df["top_genre"]
+    Xtr, _, ytr, _ = train_test_split(X, y, test_size=0.3, random_state=123, stratify=y)
+    pipe = Pipeline([
+        ("imp", SimpleImputer(strategy="median")),
+        ("sc",  StandardScaler()),
+        ("clf", RandomForestClassifier(
+            n_estimators=300, random_state=42,
+            class_weight="balanced", max_features="sqrt", min_samples_leaf=2,
+        )),
+    ])
+    pipe.fit(Xtr, ytr)
+    return pipe
+
 @st.cache_data
 def compute_tsne():
     df  = load_data()
@@ -653,79 +673,112 @@ else:
     # ── Genre Predictor ───────────────────────────────────────────────────────
     with t4:
         section("Live Genre Predictor",
-                "Adjust audio features and the trained Random Forest predicts your song's genre in real time.")
+                "Dial in an audio profile — a separate audio-only model predicts genre in real time.")
 
-        st.markdown(f"""
-        <div style="background:{CARD};border:1px solid {BORDER};border-left:3px solid {GREEN};
-                    border-radius:8px;padding:12px 16px;font-size:0.8rem;color:#aaa;margin-bottom:20px;line-height:1.5">
-          Artist is set to <i>Unknown</i> so predictions reflect <b>audio features only</b> —
-          the same signals a listener would use. Results update instantly as you move sliders.
-        </div>""", unsafe_allow_html=True)
+        # Genre presets stored in session state so buttons update sliders
+        PRESETS = {
+            "🎉 Dance Pop":    dict(bpm=120, nrgy=82, dnce=80, db=-4,  val=72, acous=5,  spch=5,  pop=78, live=8,  dur=210),
+            "🎤 Hip Hop":      dict(bpm=88,  nrgy=68, dnce=76, db=-6,  val=48, acous=6,  spch=28, pop=72, live=10, dur=225),
+            "🎸 Rock":         dict(bpm=132, nrgy=90, dnce=48, db=-5,  val=55, acous=7,  spch=4,  pop=60, live=15, dur=235),
+            "🎹 Acoustic Pop": dict(bpm=108, nrgy=40, dnce=56, db=-9,  val=62, acous=78, spch=4,  pop=65, live=9,  dur=218),
+            "🌊 EDM":          dict(bpm=128, nrgy=92, dnce=84, db=-4,  val=65, acous=3,  spch=5,  pop=68, live=6,  dur=240),
+            "🎷 R&B":          dict(bpm=94,  nrgy=58, dnce=72, db=-7,  val=56, acous=22, spch=12, pop=70, live=11, dur=220),
+        }
+
+        if "pred" not in st.session_state:
+            st.session_state.pred = PRESETS["🎉 Dance Pop"]
+
+        st.markdown('<div style="font-size:0.75rem;color:#666;margin-bottom:6px">Quick presets</div>',
+                    unsafe_allow_html=True)
+        p_cols = st.columns(len(PRESETS))
+        for col, (name, vals) in zip(p_cols, PRESETS.items()):
+            if col.button(name, use_container_width=True):
+                st.session_state.pred = vals
+                st.rerun()
+
+        st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+        p = st.session_state.pred
 
         s1, s2, s3 = st.columns(3)
         with s1:
-            bpm_v  = st.slider("BPM",          60,  210, 120, help="Tempo")
-            nrgy_v = st.slider("Energy",         0,  100,  70, help="Intensity 0–100")
-            dnce_v = st.slider("Danceability",   0,  100,  65, help="Rhythm suitability 0–100")
+            bpm_v  = st.slider("BPM",           60, 210, p["bpm"],  help="Tempo")
+            nrgy_v = st.slider("Energy",          0, 100, p["nrgy"], help="Intensity 0–100")
+            dnce_v = st.slider("Danceability",    0, 100, p["dnce"], help="Rhythm suitability 0–100")
         with s2:
-            db_v   = st.slider("Loudness (dB)", -20,  -1,  -5, help="Overall loudness")
-            val_v  = st.slider("Valence",         0,  100,  50, help="Positivity 0–100")
-            acous_v = st.slider("Acousticness",   0,  100,  15, help="Acoustic confidence 0–100")
+            db_v   = st.slider("Loudness (dB)", -20,  -1, p["db"],   help="Overall loudness in dB")
+            val_v  = st.slider("Valence",         0, 100, p["val"],  help="Positivity 0–100")
+            acous_v = st.slider("Acousticness",   0, 100, p["acous"],help="Acoustic confidence 0–100")
         with s3:
-            spch_v = st.slider("Speechiness",     0,  100,   5, help="Spoken word density 0–100")
-            pop_v  = st.slider("Popularity",       0,  100,  65, help="Spotify popularity 0–100")
+            spch_v = st.slider("Speechiness",     0, 100, p["spch"], help="Spoken word density 0–100")
+            pop_v  = st.slider("Popularity",       0, 100, p["pop"],  help="Spotify popularity 0–100")
 
         st.divider()
 
-        # Live prediction
+        with st.spinner("Loading audio model…"):
+            audio_pipe = train_audio_model()
+
         sample = pd.DataFrame([{
-            "year": 2015, "bpm": bpm_v, "nrgy": nrgy_v, "dnce": dnce_v,
-            "db": db_v, "live": 12, "val": val_v, "dur": 210,
+            "bpm": bpm_v, "nrgy": nrgy_v, "dnce": dnce_v, "db": db_v,
+            "live": p["live"], "val": val_v, "dur": p["dur"],
             "acous": acous_v, "spch": spch_v, "pop": pop_v,
-            "artist": "Unknown",
         }])
-        proba  = pipe.predict_proba(sample)[0]
-        result = (pd.DataFrame({"Genre": pipe.classes_, "Confidence": proba})
+        proba  = audio_pipe.predict_proba(sample)[0]
+        result = (pd.DataFrame({"Genre": audio_pipe.classes_, "Confidence": proba})
                     .sort_values("Confidence", ascending=False)
                     .head(6).reset_index(drop=True))
-        top    = result.iloc[0]
+        top = result.iloc[0]
 
         pred_col, chart_col = st.columns([1, 1.6])
         with pred_col:
+            top_color = GENRE_COLOR.get(top["Genre"], GREEN)
             st.markdown(f"""
-            <div style="background:{CARD};border:1px solid rgba(29,185,84,0.4);border-radius:12px;
+            <div style="background:{CARD};border:1px solid {top_color}55;border-radius:12px;
                         padding:28px 20px;text-align:center;margin-top:4px">
-              <div style="color:#555;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.12em">
+              <div style="color:#555;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.12em">
                 Predicted Genre
               </div>
-              <div style="color:{GREEN};font-size:1.9rem;font-weight:800;margin:10px 0 6px 0;
-                          line-height:1.1">
+              <div style="color:{top_color};font-size:1.8rem;font-weight:800;
+                          margin:10px 0 6px 0;line-height:1.1">
                 {top["Genre"]}
               </div>
-              <div style="color:#888;font-size:0.85rem">{top["Confidence"]:.1%} confidence</div>
+              <div style="color:#666;font-size:0.82rem">{top["Confidence"]:.1%} confidence</div>
             </div>""", unsafe_allow_html=True)
 
-            st.markdown("<div style='margin-top:12px'></div>", unsafe_allow_html=True)
-            for _, row in result.iloc[1:4].iterrows():
+            st.markdown("<div style='margin-top:10px'></div>", unsafe_allow_html=True)
+            for _, row in result.iloc[1:5].iterrows():
+                pct = row["Confidence"] / max(top["Confidence"], 0.001)
                 st.markdown(f"""
-                <div style="display:flex;justify-content:space-between;align-items:center;
-                            padding:7px 10px;border-radius:6px;background:#181818;margin-bottom:4px;
-                            font-size:0.8rem;">
-                  <span style="color:#bbb">{row['Genre']}</span>
-                  <span style="color:{GREEN};font-weight:600">{row['Confidence']:.1%}</span>
+                <div style="margin-bottom:5px">
+                  <div style="display:flex;justify-content:space-between;
+                              font-size:0.78rem;margin-bottom:2px">
+                    <span style="color:#aaa">{row['Genre']}</span>
+                    <span style="color:#666">{row['Confidence']:.1%}</span>
+                  </div>
+                  <div style="background:#2a2a2a;border-radius:3px;height:4px">
+                    <div style="background:{GENRE_COLOR.get(row['Genre'], '#444')};
+                                width:{pct*100:.0f}%;height:4px;border-radius:3px"></div>
+                  </div>
                 </div>""", unsafe_allow_html=True)
 
         with chart_col:
-            fig = px.bar(
-                result, x="Confidence", y="Genre", orientation="h",
-                color="Confidence", color_continuous_scale="Greens",
+            result["Color"] = result["Genre"].map(lambda g: GENRE_COLOR.get(g, "#444"))
+            fig = go.Figure(go.Bar(
+                x=result["Confidence"], y=result["Genre"], orientation="h",
+                marker_color=result["Color"].tolist(),
                 text=[f"{v:.1%}" for v in result["Confidence"]],
-                title="Top 6 Genre Predictions",
-            )
-            fig.update_traces(textposition="outside")
+                textposition="outside",
+            ))
             fig.update_layout(
                 yaxis={"categoryorder": "total ascending"},
-                xaxis=dict(tickformat=".0%", range=[0, min(1.2, result["Confidence"].max() * 1.4)]),
-                coloraxis_showscale=False,
+                xaxis=dict(tickformat=".0%",
+                           range=[0, min(1.15, result["Confidence"].max() * 1.35)],
+                           gridcolor="#2a2a2a"),
+                title="Top 6 Genre Predictions",
+                showlegend=False,
             )
-            chart(fig, height=320)
+            chart(fig, height=340)
+
+        insight("This model uses <b>audio features only</b> — no artist identity. "
+                "Try cranking Speechiness above 25 for hip hop, Acousticness above 70 for acoustic pop, "
+                "or BPM=128 + Energy=92 + Danceability=84 for EDM. Use the preset buttons to jump to "
+                "known genre profiles.")
