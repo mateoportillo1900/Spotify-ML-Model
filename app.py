@@ -535,16 +535,13 @@ else:
 
         with right:
             section("Final Model: Random Forest")
-            pairs = [("Test Accuracy", "83.54%", "held-out test set"),
-                     ("Best CV Score", "80.26%", "cross-validation"),
-                     ("Top Recall",    "99%",     "dance pop"),
-                     ("Genre Classes", "17",      "after filtering")]
-            for i, (lbl, val, sub) in enumerate(pairs):
-                (st.columns(2)[i % 2] if i < 2 else st.columns(2)[i % 2]).markdown(
-                    kpi(lbl, val, sub), unsafe_allow_html=True
-                )
-                if i == 1:
-                    st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
+            r1, r2 = st.columns(2)
+            r1.markdown(kpi("Test Accuracy",  "83.54%", "held-out test set"),  unsafe_allow_html=True)
+            r2.markdown(kpi("Best CV Score",  "80.26%", "cross-validation"),   unsafe_allow_html=True)
+            st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
+            r1, r2 = st.columns(2)
+            r1.markdown(kpi("Top Recall",     "99%",    "dance pop"),          unsafe_allow_html=True)
+            r2.markdown(kpi("Genre Classes",  "17",     "after filtering"),    unsafe_allow_html=True)
 
             st.markdown(f"""
             <div style="background:{CARD};border:1px solid {BORDER};border-left:3px solid {GREEN};
@@ -605,7 +602,8 @@ else:
             labelangle=20,
             labelside="bottom",
         ))
-        fig.update_layout(**PLOT, height=380, margin=dict(t=20, b=80, l=60, r=60))
+        fig.update_layout(**PLOT)
+        fig.update_layout(height=380, margin=dict(t=20, b=80, l=60, r=60))
         chart(fig)
 
         legend_html = " &nbsp;·&nbsp; ".join(
