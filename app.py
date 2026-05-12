@@ -160,7 +160,7 @@ def train_model():
         ("imp", SimpleImputer(strategy="median")),
         ("sc",  StandardScaler()),
         ("clf", RandomForestClassifier(
-            n_estimators=100, random_state=42,
+            n_estimators=50, random_state=42, n_jobs=1,
             class_weight="balanced", max_features="sqrt", min_samples_leaf=2,
         )),
     ])
@@ -173,11 +173,10 @@ def train_model():
     return pipe, fi, yte, ypred, y
 
 @st.cache_data
-def compute_tsne(n_sample: int = 1500):
+def compute_tsne(n_sample: int = 800):
     df  = load_data()
     counts  = df["top_genre"].value_counts()
     df      = df[~df["top_genre"].isin(counts[counts < 5].index)]
-    # Explicit loop avoids pandas groupby.apply column-drop behaviour in newer versions
     parts = []
     for g_name, g_df in df.groupby("top_genre"):
         k = max(1, int(n_sample * len(g_df) / len(df)))
@@ -186,9 +185,9 @@ def compute_tsne(n_sample: int = 1500):
     X  = sample[FEATURES].fillna(sample[FEATURES].mean())
     Xs = StandardScaler().fit_transform(X)
     try:
-        emb = TSNE(n_components=3, random_state=42, perplexity=30, max_iter=500).fit_transform(Xs)
+        emb = TSNE(n_components=3, random_state=42, perplexity=20, max_iter=300).fit_transform(Xs)
     except TypeError:
-        emb = TSNE(n_components=3, random_state=42, perplexity=30, n_iter=500).fit_transform(Xs)
+        emb = TSNE(n_components=3, random_state=42, perplexity=20, n_iter=300).fit_transform(Xs)
     return pd.DataFrame({
         "x": emb[:, 0], "y": emb[:, 1], "z": emb[:, 2],
         "genre":  sample["top_genre"].values,
@@ -356,9 +355,12 @@ if "Explore" in page:
         fy = c_y.selectbox("Y", FEATURES, index=2, format_func=LABELS.get, key="3dy")
         fz = c_z.selectbox("Z", FEATURES, index=5, format_func=LABELS.get, key="3dz")
 
+        # Cap at 3000 points so the Plotly figure stays lightweight
+        df_3d = df.sample(min(3000, len(df)), random_state=42) if len(df) > 3000 else df
+
         fig3d = go.Figure()
-        for genre in sorted(df["top_genre"].unique()):
-            g = df[df["top_genre"] == genre]
+        for genre in sorted(df_3d["top_genre"].unique()):
+            g = df_3d[df_3d["top_genre"] == genre]
             fig3d.add_trace(go.Scatter3d(
                 x=g[fx], y=g[fy], z=g[fz],
                 mode="markers",
@@ -417,9 +419,9 @@ if "Explore" in page:
             legend=dict(orientation="v", x=1.01, y=0.5, font=dict(size=9), itemsizing="constant"),
         )
         st.plotly_chart(fig_t, use_container_width=True)
-        insight("Dance pop (green cluster) is tightly packed and well-separated — the model achieves "
-                "99% recall on it. Overlapping genre clusters (pop, electropop) explain the model's "
-                "lower recall on those classes. Axes have no direct meaning; only distances matter.")
+        insight("Genres that form tight, separate clusters (e.g. hip hop, EDM) are easier for the model to classify. "
+                "Overlapping clusters (pop, dance pop, electropop) explain most misclassifications. "
+                "Axes have no direct meaning — only distances between points matter.")
 
     # ── Genre Profiles ────────────────────────────────────────────────────────
     with t3:
