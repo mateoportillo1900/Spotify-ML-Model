@@ -16,10 +16,15 @@ from sklearn.manifold import TSNE
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Spotify Genre Intelligence",
+    page_title="Spotify Genre Classifier",
     page_icon="🎵",
     layout="wide",
     initial_sidebar_state="expanded",
+    menu_items={
+        "Get help": "https://github.com/mateoportillo1900/Spotify-ML-Model",
+        "Report a bug": "https://github.com/mateoportillo1900/Spotify-ML-Model/issues",
+        "About": "**Spotify Genre Classifier** — Multi-class genre prediction across 35 genres using audio features from 24,993 Spotify songs (1957–2020). Built with scikit-learn, Plotly & Streamlit.\n\n[GitHub →](https://github.com/mateoportillo1900/Spotify-ML-Model)",
+    }
 )
 
 st.markdown("""
@@ -262,12 +267,33 @@ df = df_raw[
 # ── Header ────────────────────────────────────────────────────────────────────
 page_title = "🔍 Data Exploration" if "Explore" in page else "🤖 ML Model Results"
 st.markdown(f"""
-<div style="margin-bottom:18px">
-  <div style="font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2">{page_title}</div>
-  <div style="color:#555;font-size:0.82rem;margin-top:3px">
-    {len(df):,} songs &nbsp;·&nbsp; {df["top_genre"].nunique()} genres &nbsp;·&nbsp;
-    {year_range[0]}–{year_range[1]}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;
+            margin-bottom:18px;flex-wrap:wrap;gap:10px">
+  <div>
+    <div style="font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2">{page_title}</div>
+    <div style="color:#555;font-size:0.82rem;margin-top:3px">
+      {len(df):,} songs &nbsp;·&nbsp; {df["top_genre"].nunique()} genres &nbsp;·&nbsp;
+      {year_range[0]}–{year_range[1]}
+    </div>
   </div>
+  <a href="https://github.com/mateoportillo1900/Spotify-ML-Model" target="_blank"
+     style="display:inline-flex;align-items:center;gap:7px;
+            background:#1a1a1a;border:1px solid #333;border-radius:8px;
+            padding:7px 14px;text-decoration:none;color:#ccc;font-size:0.78rem;
+            font-weight:500;white-space:nowrap;margin-top:4px;
+            transition:border-color 0.2s">
+    <svg height="16" viewBox="0 0 16 16" width="16" fill="#ccc">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+               0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+               -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+               .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+               -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+               .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+               .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+               0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    View on GitHub
+  </a>
 </div>""", unsafe_allow_html=True)
 
 c1, c2, c3, c4, c5 = st.columns(5)
