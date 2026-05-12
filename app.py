@@ -238,6 +238,18 @@ with st.sidebar:
                     label_visibility="collapsed")
 
     st.divider()
+    st.markdown(f"""
+    <div style="font-size:0.78rem;color:#aaa;line-height:1.65;margin-bottom:14px">
+      This app explores <b style="color:#fff">24,993 Spotify songs</b> across
+      <b style="color:#fff">35 genres</b> (1957–2020) and trains a
+      <b style="color:#fff">Random Forest classifier</b> to predict genre
+      from audio features like energy, danceability, and speechiness.<br><br>
+      Use <b style="color:{GREEN}">Explore Data</b> to understand the dataset,
+      then switch to <b style="color:{GREEN}">ML Model</b> to see how the
+      classifier was built, evaluated, and what it gets right and wrong.
+    </div>""", unsafe_allow_html=True)
+
+    st.divider()
     st.markdown('<div style="font-size:0.65rem;color:#555;text-transform:uppercase;'
                 'letter-spacing:0.1em;margin-bottom:8px">Filters</div>', unsafe_allow_html=True)
 
@@ -299,6 +311,19 @@ st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
 # PAGE: EXPLORE
 # ══════════════════════════════════════════════════════════════════════════════
 if "Explore" in page:
+    st.markdown(f"""
+    <div style="background:{CARD};border:1px solid {BORDER};border-radius:10px;
+                padding:16px 20px;margin-bottom:18px;line-height:1.7;font-size:0.83rem;color:#bbb">
+      <b style="color:#fff;font-size:0.9rem">About the dataset</b><br>
+      The data combines <b style="color:#fff">Billboard Top Songs (2010–2019)</b> with the
+      <b style="color:#fff">TidyTuesday Spotify dataset (1957–2020)</b>, giving 24,993 songs
+      across 35 genres. Every song has 10 audio features extracted directly from the Spotify API —
+      no subjective labels, just signal from the track itself.
+      Use the <b style="color:{GREEN}">sidebar filters</b> to zoom into specific genres or eras.
+      The tabs below let you explore genre distributions, rotate a 3D feature space,
+      compare audio fingerprints across genres, and trace how music's sound has shifted over 60 years.
+    </div>""", unsafe_allow_html=True)
+
     t1, t2, t3, t4, t5 = st.tabs([
         "📊  Overview", "🌐  3D Space", "🎯  Genre Profiles", "📈  Trends", "🔎  Songs",
     ])
@@ -536,6 +561,21 @@ if "Explore" in page:
 # PAGE: ML MODEL
 # ══════════════════════════════════════════════════════════════════════════════
 else:
+    st.markdown(f"""
+    <div style="background:{CARD};border:1px solid {BORDER};border-radius:10px;
+                padding:16px 20px;margin-bottom:18px;line-height:1.7;font-size:0.83rem;color:#bbb">
+      <b style="color:#fff;font-size:0.9rem">About the model</b><br>
+      Three supervised classifiers were compared using <b style="color:#fff">4-fold cross-validation</b>
+      on 17,455 training songs across 35 genres.
+      <b style="color:#fff">Logistic Regression</b> achieved the best CV score (43.7%) but relies heavily
+      on artist identity — it essentially memorises which artists belong to which genres.
+      <b style="color:{GREEN}">Random Forest</b> (40.8% CV, 42.4% test) was selected as the final model
+      because it generalises more robustly to unseen artists and handles class imbalance better with
+      <b style="color:#fff">balanced class weighting</b>. Parameters were tuned via GridSearchCV
+      (200 trees, min_samples_split=5). The random baseline for 35 genres is 2.9% —
+      the model is <b style="color:#fff">14× better than chance</b>.
+    </div>""", unsafe_allow_html=True)
+
     with st.spinner("Loading model…"):
         pipe, fi_df, y_te, y_pred, y_all = train_model()
 
