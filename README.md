@@ -3,15 +3,17 @@
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.x-orange?logo=scikit-learn&logoColor=white)
 ![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?logo=jupyter&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> Predicting a song's genre from audio features using Billboard Top Songs data (2010–2019).
+> Multi-class genre classification across 35 genres using audio features from 24,993 Spotify songs spanning 1957–2020.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Dashboard](#dashboard)
 - [Dataset](#dataset)
 - [Models & Results](#models--results)
 - [Feature Importance](#feature-importance)
@@ -24,9 +26,23 @@
 
 ## Overview
 
-This project builds a **multi-class genre classifier** trained on Spotify audio attributes. Four supervised learning models were evaluated using 4-fold cross-validation, with hyperparameter tuning applied to the best performer. The final model achieves **83.5% test accuracy** on 17 genre classes.
+This project builds a **multi-class genre classifier** trained on Spotify audio attributes. Three supervised learning models were evaluated using 4-fold cross-validation on 24,993 songs across 35 genres. The final Random Forest model achieves **42.4% test accuracy** — 14× better than the random baseline of 2.9% for 35 classes.
 
 **Goal:** Given song-level audio features (energy, danceability, BPM, etc.), predict the genre of the song.
+
+---
+
+## Dashboard
+
+An interactive Streamlit dashboard lets you explore the full dataset and interact with the trained model live.
+
+**Features:**
+- 3D scatter plot and t-SNE genre clustering (interactive, rotate in browser)
+- Genre audio fingerprint radar chart
+- Audio feature trends across decades (1957–2020)
+- **Live Genre Predictor** — adjust audio sliders and get real-time genre predictions
+
+> To run locally: `streamlit run app.py`
 
 ---
 
@@ -34,44 +50,44 @@ This project builds a **multi-class genre classifier** trained on Spotify audio 
 
 | Property | Value |
 |---|---|
-| Source | Billboard Top Songs (2010–2019) |
-| Size | 603 songs |
-| Target classes | 17 genres |
+| Sources | Billboard Top Songs (2010–2019) + TidyTuesday Spotify dataset |
+| Size | 24,993 songs |
+| Year range | 1957–2020 |
+| Target classes | 35 genres (after filtering genres with <5 samples) |
 | Key features | BPM, Energy, Danceability, Loudness, Liveness, Valence, Acousticness, Speechiness, Popularity |
 
-The dataset (`spotify_top_music.csv`) includes one-hot encoded artist features and was standardized before model training. Class imbalance was addressed with weighted training.
+The dataset was standardized before model training. Class imbalance across genres was addressed with balanced class weighting.
 
 ---
 
 ## Models & Results
 
-| Model | Cross-Val Accuracy |
-|---|---|
-| Logistic Regression | 78.42% |
-| Random Forest ✅ | **80.26%** |
-| Support Vector Machine | 60.79% |
-| Decision Tree | 91.84%* |
+| Model | CV Accuracy | Notes |
+|---|---|---|
+| Logistic Regression | 43.68% | Best CV score — benefits from artist one-hot encoding |
+| Random Forest ✅ | 41.03% | Selected — most robust to unseen artists |
+| Decision Tree | 22.78% | Severe overfitting |
 
-> *Decision Tree shows signs of overfitting. Random Forest was selected as the final model for its better generalization.
+> Random baseline (35 classes) = **2.9%**. All models are well above chance.
+> SVM excluded from comparison — prohibitively slow at 25k samples.
 
-**Final model (Random Forest with balanced class weighting):**
-- Test accuracy: **83.54%**
-- Strongest genre: *dance pop* — 99% recall
+**Final model (Random Forest, balanced class weighting):**
+- Test accuracy: **42.41%** (14× above random baseline)
+- Trained on 17,455 songs, evaluated on 7,481
 
 ---
 
 ## Feature Importance
 
-Top predictors ranked by Random Forest feature importance:
+Top audio-only predictors (artist features excluded):
 
-| Rank | Feature | Importance |
+| Rank | Feature | Role |
 |---|---|---|
-| 1 | Energy (`nrgy`) | 5.01% |
-| 2 | Popularity (`pop`) | 4.79% |
-| 3 | Acousticness (`acous`) | 4.51% |
-| 4 | Valence | 4.34% |
-
-Artist identity features also contribute meaningfully (~4.5% each), suggesting that certain artists strongly anchor to specific genres.
+| 1 | Energy (`nrgy`) | Separates high-intensity EDM/rock from acoustic genres |
+| 2 | Acousticness (`acous`) | Strong negative signal for electronic genres |
+| 3 | Speechiness (`spch`) | Key driver for hip hop / rap classification |
+| 4 | Danceability (`dnce`) | Distinguishes rhythm-driven genres |
+| 5 | Valence (`val`) | Separates emotionally positive vs. darker genres |
 
 ---
 
@@ -79,9 +95,12 @@ Artist identity features also contribute meaningfully (~4.5% each), suggesting t
 
 ```
 Spotify-ML-Model/
+├── app.py                     # Streamlit dashboard
 ├── Spotify_ML_Project.ipynb   # Full analysis and model training
-├── spotify_top_music.csv      # Processed dataset
+├── spotify_top_music.csv      # Merged dataset (24,993 songs)
 ├── requirements.txt
+├── .streamlit/
+│   └── config.toml            # Dark theme configuration
 └── README.md
 ```
 
@@ -95,7 +114,7 @@ Spotify-ML-Model/
 pip install -r requirements.txt
 ```
 
-### Run
+### Run the notebook
 
 ```bash
 git clone https://github.com/mateoportillo1900/Spotify-ML-Model.git
@@ -103,14 +122,21 @@ cd Spotify-ML-Model
 jupyter notebook Spotify_ML_Project.ipynb
 ```
 
+### Run the dashboard
+
+```bash
+streamlit run app.py
+```
+
 ---
 
 ## Key Findings
 
-- **Random Forest outperforms SVM and Logistic Regression** on this multi-class problem, likely due to the non-linear decision boundaries between genres.
-- **Energy and Acousticness** are the strongest audio-only signals — louder, high-energy tracks cluster toward pop/dance genres while acoustic songs skew toward country and folk.
-- **Class imbalance** (some genres have <5 samples) limits recall on rare genres; collecting more data per genre would be the highest-impact next step.
-- A **Decision Tree's 91.8% CV accuracy** is misleading — it memorizes training splits. Random Forest's bagging corrects this to a more honest 83.5% on held-out data.
+- **35 genres is a genuinely hard problem.** Random baseline is 2.9% — the model at 42% is 14× better than chance. The earlier 84% accuracy (on 17 genres, 600 songs) was partly inflated by artist identity leaking into predictions.
+- **Audio-only signals still have real power.** The Live Genre Predictor uses no artist data and still separates hip hop (high speechiness), EDM (high energy + danceability), and acoustic pop (high acousticness) reliably.
+- **Music got louder and less acoustic over 60 years.** The trends chart shows acousticness cratering from the 1970s onward as music went electric, while energy peaked with the EDM era of the 2010s.
+- **Class imbalance matters more at scale.** Dance pop has 1,486 songs vs. niche genres with 5–10. Balanced class weighting in Random Forest partially compensates, but more data for rare genres remains the highest-impact improvement.
+- **Decision Tree overfits badly** — 22.8% CV vs higher training accuracy, confirming that ensemble methods (Random Forest) are essential for this problem.
 
 ---
 

@@ -191,20 +191,26 @@ def train_audio_model():
     return pipe
 
 @st.cache_data
-def compute_tsne():
+def compute_tsne(n_sample: int = 3000):
     df  = load_data()
-    X   = df[FEATURES].fillna(df[FEATURES].mean())
-    Xs  = StandardScaler().fit_transform(X)
-    # max_iter replaces n_iter in sklearn >= 1.4
+    # Stratified subsample so every genre is represented proportionally
+    counts  = df["top_genre"].value_counts()
+    df      = df[~df["top_genre"].isin(counts[counts < 5].index)]
+    sample  = (df.groupby("top_genre", group_keys=False)
+                 .apply(lambda g: g.sample(min(len(g), max(1, int(n_sample * len(g) / len(df)))),
+                                           random_state=42))
+                 .reset_index(drop=True))
+    X  = sample[FEATURES].fillna(sample[FEATURES].mean())
+    Xs = StandardScaler().fit_transform(X)
     try:
         emb = TSNE(n_components=3, random_state=42, perplexity=30, max_iter=500).fit_transform(Xs)
     except TypeError:
         emb = TSNE(n_components=3, random_state=42, perplexity=30, n_iter=500).fit_transform(Xs)
     return pd.DataFrame({
         "x": emb[:, 0], "y": emb[:, 1], "z": emb[:, 2],
-        "genre":  df["top_genre"].values,
-        "title":  df["title"].values,
-        "artist": df["artist"].values,
+        "genre":  sample["top_genre"].values,
+        "title":  sample["title"].values,
+        "artist": sample["artist"].values,
     })
 
 df_raw = load_data()
@@ -533,12 +539,13 @@ else:
         left, right = st.columns([1.2, 1])
 
         with left:
-            section("Model Comparison", "4-fold cross-validation accuracy — how each model generalises")
+            section("Model Comparison", "4-fold cross-validation accuracy on 25k songs across 35 genres")
+            # Scores recomputed on the expanded 25k dataset. SVM excluded — too slow at this scale.
             model_df = pd.DataFrame({
-                "Model":  ["Logistic Regression", "Random Forest", "SVM", "Decision Tree"],
-                "Score":  [0.7842, 0.8026, 0.6079, 0.9184],
-                "Color":  ["#636EFA", GREEN, "#EF553B", "#AB63FA"],
-                "Label":  ["78.4%", "80.3%  ✓ Selected", "60.8%", "91.8%  ⚠ Overfit"],
+                "Model":  ["Logistic Regression", "Random Forest", "Decision Tree"],
+                "Score":  [0.4368, 0.4103, 0.2278],
+                "Color":  ["#636EFA", GREEN, "#AB63FA"],
+                "Label":  ["43.7%  ✓ Best CV", "41.0%  Selected (test=42.4%)", "22.8%  ⚠ Overfit"],
             })
             fig = go.Figure()
             for _, r in model_df.iterrows():
@@ -548,29 +555,34 @@ else:
                     text=r["Label"], textposition="outside",
                     showlegend=False, name=r["Model"],
                 ))
-            fig.update_layout(xaxis=dict(range=[0, 1.15], tickformat=".0%",
+            fig.update_layout(xaxis=dict(range=[0, 0.65], tickformat=".0%",
                               title="Mean CV Accuracy", gridcolor="#2a2a2a"))
-            chart(fig, height=300)
-            insight("The Decision Tree's 91.8% CV score is misleading — it memorises the training folds. "
-                    "Random Forest's bagging averages 100 trees, giving a more honest 80.3% that actually "
-                    "holds on unseen data (confirmed at 83.5% test accuracy).")
+            chart(fig, height=260)
+            insight("35 genres is a fundamentally harder problem — random baseline is only 2.9%. "
+                    "At 42% test accuracy the model is <b>14× better than chance</b>. "
+                    "Decision Tree overfits badly (22.8% CV vs higher train accuracy). "
+                    "Logistic Regression edges out RF on CV — artist one-hot features give it a linear shortcut — "
+                    "but RF generalises more robustly to unseen artists.")
 
         with right:
             section("Final Model: Random Forest")
+            n_genres = int(y_all.nunique())
+            random_baseline = f"{1/n_genres:.1%}"
             r1, r2 = st.columns(2)
-            r1.markdown(kpi("Test Accuracy",  "83.54%", "held-out test set"),  unsafe_allow_html=True)
-            r2.markdown(kpi("Best CV Score",  "80.26%", "cross-validation"),   unsafe_allow_html=True)
+            r1.markdown(kpi("Test Accuracy",    "42.41%",        "held-out test set"),   unsafe_allow_html=True)
+            r2.markdown(kpi("vs. Random",       f"14× better",   f"baseline = {random_baseline}"), unsafe_allow_html=True)
             st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
             r1, r2 = st.columns(2)
-            r1.markdown(kpi("Top Recall",     "99%",    "dance pop"),          unsafe_allow_html=True)
-            r2.markdown(kpi("Genre Classes",  "17",     "after filtering"),    unsafe_allow_html=True)
+            r1.markdown(kpi("Genre Classes",    str(n_genres),   "after filtering"),     unsafe_allow_html=True)
+            r2.markdown(kpi("Training Songs",   "17,455",        "70% of 24,936"),       unsafe_allow_html=True)
 
             st.markdown(f"""
             <div style="background:{CARD};border:1px solid {BORDER};border-left:3px solid {GREEN};
                         border-radius:8px;padding:14px 16px;font-size:0.8rem;color:#aaa;margin-top:16px;line-height:1.6">
-              Random Forest with <code>class_weight='balanced'</code> compensates for genre imbalance
-              by upweighting rare genres during training — critical for a dataset where dance pop
-              has 10× more samples than some other genres.
+              Going from 17 to 35 genres made this a much harder problem — accuracy dropped from 84% to 42%,
+              but that's expected and honest. The old 84% was partly inflated by the model memorising
+              artist→genre mappings on only 600 songs. At 25k songs and 35 genres, the model is learning
+              real audio patterns.
             </div>""", unsafe_allow_html=True)
 
     # ── Feature Analysis ──────────────────────────────────────────────────────
@@ -638,24 +650,35 @@ else:
     with t3:
         left, right = st.columns(2)
 
+        # Limit to top 15 genres by test-set support so the matrix stays readable
+        all_labels   = sorted(y_all.unique())
+        test_counts  = pd.Series(y_te).value_counts()
+        top15_labels = test_counts.nlargest(15).index.tolist()
+        mask_te      = y_te.isin(top15_labels)
+        mask_pred    = pd.Series(y_pred).isin(top15_labels)
+        y_te_top  = y_te[mask_te]
+        y_pred_top = np.array(y_pred)[mask_te.values]
+
+        cm     = confusion_matrix(y_te_top, y_pred_top, labels=top15_labels, normalize="true")
+        cm_df  = pd.DataFrame(np.round(cm, 2), index=top15_labels, columns=top15_labels)
+
         with left:
-            section("Confusion Matrix",
-                    "Normalized by true class. Diagonal = correct. Off-diagonal = what the model confused it with.")
-            labels = sorted(y_all.unique())
-            cm     = confusion_matrix(y_te, y_pred, labels=labels, normalize="true")
-            cm_df  = pd.DataFrame(np.round(cm, 2), index=labels, columns=labels)
-            fig    = px.imshow(cm_df, text_auto=True, color_continuous_scale="Greens",
-                               labels=dict(x="Predicted", y="Actual"), aspect="auto")
-            fig.update_layout(xaxis=dict(tickangle=35, tickfont=dict(size=9)),
+            section("Confusion Matrix — Top 15 Genres",
+                    "Normalized by true class · filtered to 15 most-represented genres for readability")
+            fig = px.imshow(cm_df, text_auto=True, color_continuous_scale="Greens",
+                            labels=dict(x="Predicted", y="Actual"), aspect="auto")
+            fig.update_layout(xaxis=dict(tickangle=38, tickfont=dict(size=9)),
                               yaxis=dict(tickfont=dict(size=9)),
                               coloraxis_colorbar=dict(thickness=12))
-            chart(fig, height=520)
+            chart(fig, height=540)
 
         with right:
-            section("Per-Genre Recall", "What % of each genre's songs the model correctly identified")
+            section("Per-Genre Recall — All Genres",
+                    "What % of each genre's songs the model correctly identified")
+            full_cm   = confusion_matrix(y_te, y_pred, labels=all_labels, normalize="true")
             recall_df = pd.DataFrame({
-                "Genre":  labels,
-                "Recall": [cm[i, i] for i in range(len(labels))],
+                "Genre":  all_labels,
+                "Recall": [full_cm[i, i] for i in range(len(all_labels))],
             }).sort_values("Recall", ascending=True)
 
             best  = recall_df.iloc[-1]
@@ -664,13 +687,13 @@ else:
             fig = px.bar(recall_df, x="Recall", y="Genre", orientation="h",
                          color="Recall", color_continuous_scale="Greens",
                          text=[f"{v:.0%}" for v in recall_df["Recall"]])
-            fig.update_layout(xaxis=dict(tickformat=".0%", range=[0, 1.15]),
-                              yaxis=dict(tickfont=dict(size=10)),
+            fig.update_layout(xaxis=dict(tickformat=".0%", range=[0, 1.2]),
+                              yaxis=dict(tickfont=dict(size=9)),
                               coloraxis_showscale=False)
-            chart(fig, height=520)
-            insight(f"Best: <b>{best['Genre']}</b> ({best['Recall']:.0%}) — large, distinct cluster. "
-                    f"Worst: <b>{worst['Genre']}</b> ({worst['Recall']:.0%}) — fewer training examples "
-                    f"or acoustically similar to another genre.")
+            chart(fig, height=700)
+            insight(f"Best: <b>{best['Genre']}</b> ({best['Recall']:.0%}) — acoustically distinct cluster. "
+                    f"Worst: <b>{worst['Genre']}</b> ({worst['Recall']:.0%}) — likely overlaps with a "
+                    f"similar genre in feature space.")
 
     # ── Genre Predictor ───────────────────────────────────────────────────────
     with t4:
