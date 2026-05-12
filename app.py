@@ -109,10 +109,12 @@ PLOT = dict(
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def kpi(label, value, sub=None):
-    sub_html = f'<div style="color:#666;font-size:0.7rem;margin-top:2px">{sub}</div>' if sub else ""
+    sub_html = f'<div style="color:#666;font-size:0.7rem;margin-top:2px">{sub}</div>' if sub else \
+               '<div style="font-size:0.7rem;margin-top:2px">&nbsp;</div>'
     return f"""
     <div style="background:{CARD};border:1px solid {BORDER};border-radius:10px;
-                padding:16px 10px;text-align:center;">
+                padding:16px 10px;text-align:center;min-height:96px;
+                display:flex;flex-direction:column;justify-content:center;">
       <div style="color:#666;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em">{label}</div>
       <div style="color:{GREEN};font-size:1.55rem;font-weight:700;margin-top:4px;line-height:1.1">{value}</div>
       {sub_html}
@@ -132,10 +134,13 @@ def section(title, subtitle=""):
 def insight(text):
     st.markdown(f'<div class="insight">💡 {text}</div>', unsafe_allow_html=True)
 
-def chart(fig, height=None, **kw):
+def chart(fig, height=None, margin=None, **kw):
+    layout = {**PLOT}
+    if margin:
+        layout["margin"] = margin
     if height:
-        fig.update_layout(height=height)
-    fig.update_layout(**PLOT)
+        layout["height"] = height
+    fig.update_layout(**layout)
     st.plotly_chart(fig, use_container_width=True, **kw)
 
 # ── Data ──────────────────────────────────────────────────────────────────────
@@ -226,7 +231,7 @@ with st.sidebar:
     st.markdown(f"""
     <div style="padding:4px 0 18px 0">
       <div style="font-size:1.25rem;font-weight:800;color:{GREEN};letter-spacing:-0.01em">🎵 Spotify Intel</div>
-      <div style="font-size:0.7rem;color:#555;margin-top:1px">Billboard Top Songs · 2010–2019</div>
+      <div style="font-size:0.7rem;color:#555;margin-top:1px">Spotify Dataset · 1957–2020</div>
     </div>""", unsafe_allow_html=True)
 
     page = st.radio("nav", ["🔍  Explore Data", "🤖  ML Model"],
@@ -331,8 +336,10 @@ if "Explore" in page:
             corr.index   = [LABELS[c] for c in FEATURES]
             corr.columns = [LABELS[c] for c in FEATURES]
             fig = px.imshow(corr, text_auto=True, color_continuous_scale="RdBu_r", zmin=-1, zmax=1)
-            fig.update_layout(margin=dict(t=10, b=0, l=0, r=0))
-            chart(fig, height=230)
+            fig.update_layout(xaxis=dict(tickangle=45, tickfont=dict(size=9)),
+                              yaxis=dict(tickfont=dict(size=9)),
+                              coloraxis_colorbar=dict(thickness=10))
+            chart(fig, height=420, margin=dict(t=12, b=10, l=10, r=10))
             insight("Energy & Loudness are strongly correlated (r ≈ 0.7) — they measure similar things. "
                     "Acousticness is strongly <i>negatively</i> correlated with both, separating acoustic "
                     "and electronic genres cleanly.")
