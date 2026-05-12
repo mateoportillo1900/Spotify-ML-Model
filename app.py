@@ -193,13 +193,14 @@ def train_audio_model():
 @st.cache_data
 def compute_tsne(n_sample: int = 3000):
     df  = load_data()
-    # Stratified subsample so every genre is represented proportionally
     counts  = df["top_genre"].value_counts()
     df      = df[~df["top_genre"].isin(counts[counts < 5].index)]
-    sample  = (df.groupby("top_genre", group_keys=False)
-                 .apply(lambda g: g.sample(min(len(g), max(1, int(n_sample * len(g) / len(df)))),
-                                           random_state=42))
-                 .reset_index(drop=True))
+    # Explicit loop avoids pandas groupby.apply column-drop behaviour in newer versions
+    parts = []
+    for g_name, g_df in df.groupby("top_genre"):
+        k = max(1, int(n_sample * len(g_df) / len(df)))
+        parts.append(g_df.sample(min(k, len(g_df)), random_state=42))
+    sample = pd.concat(parts).reset_index(drop=True)
     X  = sample[FEATURES].fillna(sample[FEATURES].mean())
     Xs = StandardScaler().fit_transform(X)
     try:
