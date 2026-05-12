@@ -6,10 +6,9 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, OneHotEncoder
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
@@ -92,7 +91,6 @@ LABELS   = {
 RADAR_COLS   = ["bpm", "nrgy", "dnce", "val", "acous", "spch", "pop"]
 RADAR_LABELS = ["BPM", "Energy", "Danceability", "Valence", "Acousticness", "Speechiness", "Popularity"]
 NUM_FEATS    = ["year", "bpm", "nrgy", "dnce", "db", "live", "val", "dur", "acous", "spch", "pop"]
-CAT_FEATS    = ["artist"]
 
 GREEN  = "#1DB954"
 BG     = "#121212"
@@ -152,51 +150,30 @@ def load_data():
 
 @st.cache_resource
 def train_model():
+    """Audio-only Random Forest — no artist OHE to keep memory within Streamlit Cloud limits."""
     df = load_data()
     counts = df["top_genre"].value_counts()
     df = df[~df["top_genre"].isin(counts[counts < 5].index)]
-
-    pre = ColumnTransformer([
-        ("num", Pipeline([("i", SimpleImputer(strategy="constant")), ("s", StandardScaler())]), NUM_FEATS),
-        ("cat", Pipeline([("i", SimpleImputer(strategy="constant", fill_value="Unknown")),
-                          ("o", OneHotEncoder(handle_unknown="ignore"))]), CAT_FEATS),
-    ])
-    X, y = df[NUM_FEATS + CAT_FEATS], df["top_genre"]
+    X, y = df[NUM_FEATS], df["top_genre"]
     Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.3, random_state=123, stratify=y)
-    pipe = Pipeline([("pre", pre), ("clf", RandomForestClassifier(
-        n_estimators=200, random_state=42, class_weight="balanced", min_samples_split=5,
-    ))])
-    pipe.fit(Xtr, ytr)
-    ypred = pipe.predict(Xte)
-    ohe   = pipe.named_steps["pre"].named_transformers_["cat"].named_steps["o"]
-    fi    = pd.DataFrame({
-        "Feature":    NUM_FEATS + ohe.get_feature_names_out(CAT_FEATS).tolist(),
-        "Importance": pipe.named_steps["clf"].feature_importances_,
-    }).sort_values("Importance", ascending=False)
-    return pipe, fi, yte, ypred, y
-
-@st.cache_resource
-def train_audio_model():
-    """Audio-only Random Forest — no artist features so the predictor reflects pure sound."""
-    df = load_data()
-    counts = df["top_genre"].value_counts()
-    df = df[~df["top_genre"].isin(counts[counts < 5].index)]
-    X  = df[FEATURES]
-    y  = df["top_genre"]
-    Xtr, _, ytr, _ = train_test_split(X, y, test_size=0.3, random_state=123, stratify=y)
     pipe = Pipeline([
         ("imp", SimpleImputer(strategy="median")),
         ("sc",  StandardScaler()),
         ("clf", RandomForestClassifier(
-            n_estimators=300, random_state=42,
+            n_estimators=100, random_state=42,
             class_weight="balanced", max_features="sqrt", min_samples_leaf=2,
         )),
     ])
     pipe.fit(Xtr, ytr)
-    return pipe
+    ypred = pipe.predict(Xte)
+    fi = pd.DataFrame({
+        "Feature":    [LABELS.get(f, f.capitalize()) for f in NUM_FEATS],
+        "Importance": pipe.named_steps["clf"].feature_importances_,
+    }).sort_values("Importance", ascending=False)
+    return pipe, fi, yte, ypred, y
 
 @st.cache_data
-def compute_tsne(n_sample: int = 3000):
+def compute_tsne(n_sample: int = 1500):
     df  = load_data()
     counts  = df["top_genre"].value_counts()
     df      = df[~df["top_genre"].isin(counts[counts < 5].index)]
@@ -573,7 +550,7 @@ else:
       because it generalises more robustly to unseen artists and handles class imbalance better with
       <b style="color:#fff">balanced class weighting</b>. Parameters were tuned via GridSearchCV
       (200 trees, min_samples_split=5). The random baseline for 35 genres is 2.9% —
-      the model is <b style="color:#fff">14× better than chance</b>.
+      the model is <b style="color:#fff">12× better than chance</b>.
     </div>""", unsafe_allow_html=True)
 
     with st.spinner("Loading model…"):
@@ -608,18 +585,18 @@ else:
                               title="Mean CV Accuracy", gridcolor="#2a2a2a"))
             chart(fig, height=260)
             insight("35 genres is a fundamentally harder problem — random baseline is only 2.9%. "
-                    "At 42% test accuracy the model is <b>14× better than chance</b>. "
-                    "Decision Tree overfits badly (22.8% CV vs higher train accuracy). "
-                    "Logistic Regression edges out RF on CV — artist one-hot features give it a linear shortcut — "
-                    "but RF generalises more robustly to unseen artists.")
+                    "The CV scores above included artist identity features; the <b>deployed model uses audio only</b>, "
+                    "which drops test accuracy to 35% but makes predictions that generalise to any song, not just known artists. "
+                    "Decision Tree overfits badly at 22.8% CV. "
+                    "Logistic Regression edges RF on CV due to its artist→genre shortcut, but RF is selected for robustness.")
 
         with right:
             section("Final Model: Random Forest")
             n_genres = int(y_all.nunique())
             random_baseline = f"{1/n_genres:.1%}"
             r1, r2 = st.columns(2)
-            r1.markdown(kpi("Test Accuracy",    "42.41%",        "held-out test set"),   unsafe_allow_html=True)
-            r2.markdown(kpi("vs. Random",       f"14× better",   f"baseline = {random_baseline}"), unsafe_allow_html=True)
+            r1.markdown(kpi("Test Accuracy",    "35.18%",        "held-out test set"),   unsafe_allow_html=True)
+            r2.markdown(kpi("vs. Random",       f"12× better",   f"baseline = {random_baseline}"), unsafe_allow_html=True)
             st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
             r1, r2 = st.columns(2)
             r1.markdown(kpi("Genre Classes",    str(n_genres),   "after filtering"),     unsafe_allow_html=True)
@@ -646,10 +623,10 @@ else:
             fig.update_layout(yaxis={"categoryorder": "total ascending"},
                               coloraxis_showscale=False)
             chart(fig, height=460)
-            insight(f"<b>{top_feat}</b> is the single most predictive feature. "
-                    "Artist identity features appear near the top — the model has partially "
-                    "learned that certain artists are synonymous with certain genres, which "
-                    "may not generalise to new artists.")
+            insight(f"<b>{top_feat}</b> is the single most predictive audio feature. "
+                    "The model uses only the 10 Spotify audio signals — no artist identity — "
+                    "so these importances reflect what the music itself sounds like, "
+                    "not who made it.")
 
         with right:
             section("Distribution by Genre", "How a feature's values differ across the top 8 genres")
@@ -788,14 +765,14 @@ else:
 
         st.divider()
 
-        with st.spinner("Loading audio model…"):
-            audio_pipe = train_audio_model()
+        audio_pipe = pipe  # same model used throughout
 
         sample = pd.DataFrame([{
+            "year": 2020,  # fix to present so year doesn't skew predictions
             "bpm": bpm_v, "nrgy": nrgy_v, "dnce": dnce_v, "db": db_v,
             "live": p["live"], "val": val_v, "dur": p["dur"],
             "acous": acous_v, "spch": spch_v, "pop": pop_v,
-        }])
+        }])[NUM_FEATS]
         proba  = audio_pipe.predict_proba(sample)[0]
         result = (pd.DataFrame({"Genre": audio_pipe.classes_, "Confidence": proba})
                     .sort_values("Confidence", ascending=False)

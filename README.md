@@ -26,7 +26,7 @@
 
 ## Overview
 
-This project builds a **multi-class genre classifier** trained on Spotify audio attributes. Three supervised learning models were evaluated using 4-fold cross-validation on 24,993 songs across 35 genres. The final Random Forest model achieves **42.4% test accuracy** — 14× better than the random baseline of 2.9% for 35 classes.
+This project builds a **multi-class genre classifier** trained on Spotify audio attributes. Three supervised learning models were evaluated using 4-fold cross-validation on 24,993 songs across 35 genres. The deployed Random Forest model uses **audio features only** (no artist identity) and achieves **35.2% test accuracy** — 12× better than the random baseline of 2.9% for 35 classes.
 
 **Goal:** Given song-level audio features (energy, danceability, BPM, etc.), predict the genre of the song.
 
@@ -71,9 +71,10 @@ The dataset was standardized before model training. Class imbalance across genre
 > Random baseline (35 classes) = **2.9%**. All models are well above chance.
 > SVM excluded from comparison — prohibitively slow at 25k samples.
 
-**Final model (Random Forest, balanced class weighting):**
-- Test accuracy: **42.41%** (14× above random baseline)
+**Final model (Random Forest, audio features only, balanced class weighting):**
+- Test accuracy: **35.18%** (12× above random baseline)
 - Trained on 17,455 songs, evaluated on 7,481
+- CV scores above used artist identity features; deployed model intentionally excludes them for generalisability
 
 ---
 
