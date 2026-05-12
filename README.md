@@ -133,7 +133,7 @@ streamlit run app.py
 
 ## Key Findings
 
-- **35 genres is a genuinely hard problem.** Random baseline is 2.9% — the model at 42% is 14× better than chance. The earlier 84% accuracy (on 17 genres, 600 songs) was partly inflated by artist identity leaking into predictions.
+- **35 genres is a genuinely hard problem.** Random baseline is 2.9% — the model at 35% is 12× better than chance. The earlier 84% accuracy (on 17 genres, 600 songs) was partly inflated by artist identity leaking into predictions.
 - **Audio-only signals still have real power.** The Live Genre Predictor uses no artist data and still separates hip hop (high speechiness), EDM (high energy + danceability), and acoustic pop (high acousticness) reliably.
 - **Music got louder and less acoustic over 60 years.** The trends chart shows acousticness cratering from the 1970s onward as music went electric, while energy peaked with the EDM era of the 2010s.
 - **Class imbalance matters more at scale.** Dance pop has 1,486 songs vs. niche genres with 5–10. Balanced class weighting in Random Forest partially compensates, but more data for rare genres remains the highest-impact improvement.
