@@ -164,7 +164,7 @@ def train_model():
     X, y = df[NUM_FEATS + CAT_FEATS], df["top_genre"]
     Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.3, random_state=123, stratify=y)
     pipe = Pipeline([("pre", pre), ("clf", RandomForestClassifier(
-        n_estimators=100, random_state=42, class_weight="balanced"
+        n_estimators=200, random_state=42, class_weight="balanced", min_samples_split=5,
     ))])
     pipe.fit(Xtr, ytr)
     ypred = pipe.predict(Xte)
@@ -241,7 +241,8 @@ with st.sidebar:
     st.markdown('<div style="font-size:0.65rem;color:#555;text-transform:uppercase;'
                 'letter-spacing:0.1em;margin-bottom:8px">Filters</div>', unsafe_allow_html=True)
 
-    all_genres = sorted(df_raw["top_genre"].unique())
+    _counts    = df_raw["top_genre"].value_counts()
+    all_genres = sorted(_counts[_counts >= 5].index.tolist())
     sel_genres = st.multiselect("Genre", all_genres, default=all_genres,
                                 label_visibility="collapsed", placeholder="All genres")
     yr_min = int(df_raw["year"].min())
@@ -551,9 +552,9 @@ else:
             # Scores recomputed on the expanded 25k dataset. SVM excluded — too slow at this scale.
             model_df = pd.DataFrame({
                 "Model":  ["Logistic Regression", "Random Forest", "Decision Tree"],
-                "Score":  [0.4368, 0.4103, 0.2278],
+                "Score":  [0.4371, 0.4080, 0.2278],
                 "Color":  ["#636EFA", GREEN, "#AB63FA"],
-                "Label":  ["43.7%  ✓ Best CV", "41.0%  Selected (test=42.4%)", "22.8%  ⚠ Overfit"],
+                "Label":  ["43.7%  ✓ Best CV", "40.8%  Selected — robust to unseen artists", "22.8%  ⚠ Overfit"],
             })
             fig = go.Figure()
             for _, r in model_df.iterrows():

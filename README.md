@@ -64,8 +64,8 @@ The dataset was standardized before model training. Class imbalance across genre
 
 | Model | CV Accuracy | Notes |
 |---|---|---|
-| Logistic Regression | 43.68% | Best CV score — benefits from artist one-hot encoding |
-| Random Forest ✅ | 41.03% | Selected — most robust to unseen artists |
+| Logistic Regression | 43.71% | Best CV score — benefits from artist one-hot encoding |
+| Random Forest ✅ | 40.80% | Selected — more robust to unseen artists than LR |
 | Decision Tree | 22.78% | Severe overfitting |
 
 > Random baseline (35 classes) = **2.9%**. All models are well above chance.
