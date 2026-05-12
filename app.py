@@ -232,7 +232,9 @@ with st.sidebar:
     all_genres = sorted(df_raw["top_genre"].unique())
     sel_genres = st.multiselect("Genre", all_genres, default=all_genres,
                                 label_visibility="collapsed", placeholder="All genres")
-    year_range = st.slider("Year", 2010, 2019, (2010, 2019))
+    yr_min = int(df_raw["year"].min())
+    yr_max = int(df_raw["year"].max())
+    year_range = st.slider("Year", yr_min, yr_max, (2010, yr_max))
 
     st.divider()
     with st.expander("Feature Glossary"):
@@ -456,7 +458,7 @@ if "Explore" in page:
 
     # ── Trends ────────────────────────────────────────────────────────────────
     with t4:
-        section("Audio Feature Trends", "How the sound of Billboard hits changed year by year")
+        section("Audio Feature Trends", "How the sound of popular music changed across decades")
 
         sel_feats = st.multiselect("Features to track", FEATURES,
                                    default=["nrgy", "val", "dnce", "acous", "pop"],
@@ -472,15 +474,15 @@ if "Explore" in page:
             fig.update_traces(line=dict(width=2.5))
             fig.update_layout(xaxis=dict(dtick=1))
             chart(fig, height=400)
-            insight("Acousticness has trended down while Energy held steady — pop music got louder and "
-                    "more electronic over the decade. Valence dipped mid-decade, suggesting a shift toward "
-                    "more melancholic or emotionally complex hits around 2015–2017.")
+            insight("Acousticness has trended sharply down since the 1970s as music went electric and digital. "
+                    "Energy and Danceability peaked in the 2010s EDM era. Filter to 2010–2020 "
+                    "to zoom into the streaming era specifically.")
         else:
             st.info("Select at least one feature.")
 
         st.divider()
-        section("Most Charted Artists",
-                "Artists with the most songs in the Billboard Top 100 (2010–2019). Color = average popularity.")
+        section("Most Represented Artists",
+                "Artists with the most songs in the dataset. Color = average popularity score.")
 
         top_art = (
             df.groupby("artist")
