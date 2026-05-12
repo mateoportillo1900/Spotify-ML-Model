@@ -29,7 +29,9 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-  #MainMenu, footer, header { visibility: hidden; }
+  #MainMenu, footer { visibility: hidden; }
+  /* Hide header chrome on desktop only — mobile needs it for the sidebar toggle */
+  @media (min-width: 769px) { header { visibility: hidden; } }
   .block-container { padding: 1.5rem 2rem 1rem 2rem; }
 
   /* Top accent bar */
@@ -85,8 +87,8 @@ st.markdown("""
   @media (max-width: 768px) {
 
     /* Tighter page padding */
-    .block-container { padding: 1rem 0.75rem 1rem 0.75rem !important; }
-    .top-bar { margin: -1rem -0.75rem 1rem -0.75rem; }
+    .block-container { padding: 0.75rem 0.6rem 1rem 0.6rem !important; }
+    .top-bar { margin: -0.75rem -0.6rem 1rem -0.6rem; }
 
     /* Stack all columns vertically */
     [data-testid="stHorizontalBlock"] {
@@ -98,48 +100,62 @@ st.markdown("""
       min-width: 100% !important;
     }
 
-    /* KPI cards — 2-up grid on mobile */
+    /* KPI row — force 2-column grid and compact cards */
     [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]:nth-child(5)) {
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
-      gap: 8px !important;
+      gap: 6px !important;
+      flex-direction: unset !important;
+    }
+    [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]:nth-child(5))
+    [data-testid="stColumn"] {
+      min-width: unset !important;
+      width: auto !important;
+      flex: unset !important;
+    }
+
+    /* Compact KPI card values */
+    [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]:nth-child(5))
+    div[style*="min-height:96px"],
+    div[style*="min-height: 96px"] {
+      min-height: 64px !important;
+      padding: 8px 6px !important;
+    }
+    /* Scale down the big green number inside KPI cards */
+    [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]:nth-child(5))
+    div[style*="1.55rem"] {
+      font-size: 1.1rem !important;
     }
 
     /* Smaller tab labels so they don't overflow */
     .stTabs [data-baseweb="tab"] {
-      padding: 6px 10px !important;
-      font-size: 0.72rem !important;
+      padding: 6px 8px !important;
+      font-size: 0.68rem !important;
     }
 
     /* Shrink chart heights so you don't scroll forever */
-    .stPlotlyChart { max-height: 320px; }
-    .stPlotlyChart > div { max-height: 320px; }
+    .stPlotlyChart { max-height: 300px; }
+    .stPlotlyChart > div { max-height: 300px; }
 
-    /* Header GitHub button wraps cleanly */
+    /* Header GitHub button wraps below title */
     .mobile-header { flex-direction: column !important; gap: 8px !important; }
 
-    /* Sidebar toggle visible on mobile */
-    [data-testid="collapsedControl"] { display: flex !important; }
+    /* Insight boxes */
+    .insight { font-size: 0.73rem !important; padding: 9px 11px !important; }
 
-    /* Reduce section heading size */
-    .insight { font-size: 0.75rem !important; padding: 10px 12px !important; }
-
-    /* Violin / box plots: rotate x-axis labels less aggressively */
-    .xtick text { font-size: 9px !important; }
-
-    /* Reduce selectbox/slider label size */
+    /* Sliders and selects */
     .stSelectbox label, .stSlider label,
     .stMultiSelect label { font-size: 0.75rem !important; }
   }
 
-  @media (max-width: 480px) {
-    /* On very small screens, single column KPI cards */
+  @media (max-width: 420px) {
+    /* Very small phones — single column KPIs */
     [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]:nth-child(5)) {
-      grid-template-columns: 1fr !important;
+      grid-template-columns: 1fr 1fr !important;
     }
     .stTabs [data-baseweb="tab"] {
-      padding: 5px 7px !important;
-      font-size: 0.65rem !important;
+      padding: 5px 6px !important;
+      font-size: 0.6rem !important;
     }
   }
 </style>
