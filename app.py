@@ -80,6 +80,68 @@ st.markdown("""
   /* Multiselect tags */
   .stMultiSelect [data-baseweb="tag"] { background: #1DB954 !important; color: #000 !important; }
   hr { border-color: rgba(255,255,255,0.07) !important; }
+
+  /* ── Mobile responsiveness ─────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+
+    /* Tighter page padding */
+    .block-container { padding: 1rem 0.75rem 1rem 0.75rem !important; }
+    .top-bar { margin: -1rem -0.75rem 1rem -0.75rem; }
+
+    /* Stack all columns vertically */
+    [data-testid="stHorizontalBlock"] {
+      flex-direction: column !important;
+    }
+    [data-testid="stColumn"] {
+      width: 100% !important;
+      flex: 1 1 100% !important;
+      min-width: 100% !important;
+    }
+
+    /* KPI cards — 2-up grid on mobile */
+    [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]:nth-child(5)) {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 8px !important;
+    }
+
+    /* Smaller tab labels so they don't overflow */
+    .stTabs [data-baseweb="tab"] {
+      padding: 6px 10px !important;
+      font-size: 0.72rem !important;
+    }
+
+    /* Shrink chart heights so you don't scroll forever */
+    .stPlotlyChart { max-height: 320px; }
+    .stPlotlyChart > div { max-height: 320px; }
+
+    /* Header GitHub button wraps cleanly */
+    .mobile-header { flex-direction: column !important; gap: 8px !important; }
+
+    /* Sidebar toggle visible on mobile */
+    [data-testid="collapsedControl"] { display: flex !important; }
+
+    /* Reduce section heading size */
+    .insight { font-size: 0.75rem !important; padding: 10px 12px !important; }
+
+    /* Violin / box plots: rotate x-axis labels less aggressively */
+    .xtick text { font-size: 9px !important; }
+
+    /* Reduce selectbox/slider label size */
+    .stSelectbox label, .stSlider label,
+    .stMultiSelect label { font-size: 0.75rem !important; }
+  }
+
+  @media (max-width: 480px) {
+    /* On very small screens, single column KPI cards */
+    [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]:nth-child(5)) {
+      grid-template-columns: 1fr !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+      padding: 5px 7px !important;
+      font-size: 0.65rem !important;
+    }
+  }
 </style>
 <div class="top-bar"></div>
 """, unsafe_allow_html=True)
@@ -267,7 +329,7 @@ df = df_raw[
 # ── Header ────────────────────────────────────────────────────────────────────
 page_title = "🔍 Data Exploration" if "Explore" in page else "🤖 ML Model Results"
 st.markdown(f"""
-<div style="display:flex;align-items:flex-start;justify-content:space-between;
+<div class="mobile-header" style="display:flex;align-items:flex-start;justify-content:space-between;
             margin-bottom:18px;flex-wrap:wrap;gap:10px">
   <div>
     <div style="font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2">{page_title}</div>
