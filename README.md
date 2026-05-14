@@ -20,6 +20,7 @@
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Key Findings](#key-findings)
+- [Methodology Deep-Dive](docs/METHODOLOGY.md) — Visual walkthrough of every modeling decision
 - [What I'd Do Differently With 2026 Tools](#what-id-do-differently-with-2026-tools)
 - [License](#license)
 
@@ -101,6 +102,8 @@ Spotify-ML-Model/
 ├── Spotify_ML_Project.ipynb   # Full analysis and model training
 ├── spotify_top_music.csv      # Merged dataset (24,993 songs)
 ├── requirements.txt
+├── docs/
+│   └── METHODOLOGY.md         # Visual methodology deep-dive (Mermaid diagrams)
 ├── .streamlit/
 │   └── config.toml            # Dark theme configuration
 └── README.md
