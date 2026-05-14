@@ -326,8 +326,10 @@ with st.sidebar:
 
     _counts    = df_raw["top_genre"].value_counts()
     all_genres = sorted(_counts[_counts >= 5].index.tolist())
-    sel_genres = st.multiselect("Genre", all_genres, default=all_genres,
-                                label_visibility="collapsed", placeholder="All genres")
+    sel_genres_raw = st.multiselect("Genre", all_genres, default=[],
+                                    label_visibility="collapsed",
+                                    placeholder=f"All {len(all_genres)} genres")
+    sel_genres = sel_genres_raw if sel_genres_raw else all_genres
     yr_min = int(df_raw["year"].min())
     yr_max = int(df_raw["year"].max())
     year_range = st.slider("Year", yr_min, yr_max, (yr_min, yr_max))
@@ -420,37 +422,28 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Header ────────────────────────────────────────────────────────────────────
-if "Explore" in page:
-    page_title    = "Data Exploration"
-    page_subtitle = "Interactive analysis of audio features across 35 genres"
-else:
-    page_title    = "ML Model Results"
-    page_subtitle = "Random Forest classifier · 35.18% accuracy on held-out test set"
+# ── Breadcrumb strip: page label + filter summary + GitHub link ──────────────
+page_label = "Data Exploration" if "Explore" in page else "ML Model Results"
+is_filtered = bool(sel_genres_raw) or year_range != (yr_min, yr_max)
+filter_text = (f"{len(df):,} of {len(df_raw):,} songs"
+               if is_filtered else f"all {len(df_raw):,} songs")
 
 st.markdown(f"""
-<div class="mobile-header" style="display:flex;align-items:center;justify-content:space-between;
-            margin-bottom:22px;flex-wrap:wrap;gap:14px;
-            padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.06)">
-  <div style="flex:1;min-width:260px">
-    <div style="font-size:1.8rem;font-weight:800;letter-spacing:-0.025em;line-height:1.15;color:#fff">
-      {page_title}
-    </div>
-    <div style="color:#888;font-size:0.86rem;margin-top:5px;font-weight:400;line-height:1.4">
-      {page_subtitle}
-    </div>
-    <div style="color:#555;font-size:0.7rem;margin-top:10px;letter-spacing:0.12em;font-weight:600">
-      {len(df):,} SONGS &nbsp;·&nbsp; {df["top_genre"].nunique()} GENRES &nbsp;·&nbsp;
-      {year_range[0]}–{year_range[1]}
-    </div>
+<div style="display:flex;align-items:center;justify-content:space-between;
+            margin-bottom:18px;gap:12px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:10px;color:#666;
+              font-size:0.78rem;letter-spacing:0.01em">
+    <span style="color:#666">Spotify Genre Classifier</span>
+    <span style="color:#333">/</span>
+    <span style="color:#fff;font-weight:600">{page_label}</span>
+    <span style="color:#333">·</span>
+    <span style="color:#666">{filter_text}</span>
   </div>
   <a href="https://github.com/mateoportillo1900/Spotify-ML-Model" target="_blank"
-     style="display:inline-flex;align-items:center;gap:8px;
-            background:rgba(29,185,84,0.08);border:1px solid rgba(29,185,84,0.35);
-            border-radius:8px;padding:9px 16px;text-decoration:none;
-            color:#1DB954;font-size:0.8rem;font-weight:600;white-space:nowrap;
-            transition:all 0.2s">
-    <svg height="16" viewBox="0 0 16 16" width="16" fill="#1DB954">
+     style="display:inline-flex;align-items:center;gap:7px;
+            color:#888;font-size:0.75rem;font-weight:500;text-decoration:none;
+            transition:color 0.2s">
+    <svg height="14" viewBox="0 0 16 16" width="14" fill="currentColor">
       <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
                0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
                -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
@@ -460,7 +453,7 @@ st.markdown(f"""
                .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
                0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
     </svg>
-    View on GitHub
+    Source on GitHub
   </a>
 </div>""", unsafe_allow_html=True)
 
@@ -523,13 +516,17 @@ if "Explore" in page:
                     f"This class imbalance directly impacts model recall for minority genres.")
 
         with right:
-            section("Songs per Year", "Volume of charting songs across the decade")
+            section("Songs per Year", "Volume of songs in the dataset by release year")
             yc = df["year"].value_counts().sort_index().reset_index()
             yc.columns = ["Year", "Songs"]
             fig = px.bar(yc, x="Year", y="Songs", color="Songs",
-                         color_continuous_scale="Greens", text="Songs")
-            fig.update_layout(coloraxis_showscale=False, xaxis=dict(dtick=1))
-            chart(fig, height=210)
+                         color_continuous_scale="Greens")
+            # No per-bar text labels — too noisy with 60+ years
+            # Tick every 10 years instead of every year to avoid label collision
+            fig.update_layout(coloraxis_showscale=False,
+                              xaxis=dict(dtick=10, tickfont=dict(size=10)),
+                              yaxis=dict(tickfont=dict(size=10)))
+            chart(fig, height=260)
 
             section("Feature Correlations", "Pearson r — how audio attributes move together")
             corr = df[FEATURES].corr().round(2)
@@ -581,12 +578,12 @@ if "Explore" in page:
                 zaxis=dict(title=LABELS[fz], backgroundcolor=CARD, gridcolor="#2a2a2a", showbackground=True),
                 bgcolor=BG,
             ),
-            legend=dict(orientation="v", x=1.01, y=0.5, font=dict(size=9), itemsizing="constant"),
+            showlegend=False,  # 35-genre legend overflows; rely on hover instead
         )
         st.plotly_chart(fig3d, use_container_width=True)
-        insight(f"Try <b>Energy × Danceability × Valence</b> — dance pop clusters high on all three, "
-                f"while acoustic and folk genres pull to the low-energy, high-acousticness corner. "
-                f"Clear separation here explains why the model performs well on those genres.")
+        insight("Genres separate where their audio profiles diverge. High-energy electronic genres "
+                "pull to one corner; acoustic and folk pull to the opposite. The visible overlap "
+                "between dance pop, electropop, and pop is exactly where the model's confusion concentrates.")
 
         st.divider()
         section("t-SNE 3D — Genre Clustering",
@@ -614,7 +611,7 @@ if "Explore" in page:
                 zaxis=dict(title="Component 3", backgroundcolor=CARD, gridcolor="#2a2a2a", showbackground=True),
                 bgcolor=BG,
             ),
-            legend=dict(orientation="v", x=1.01, y=0.5, font=dict(size=9), itemsizing="constant"),
+            showlegend=False,
         )
         st.plotly_chart(fig_t, use_container_width=True)
         insight("Genres that form tight, separate clusters (e.g. hip hop, EDM) are easier for the model to classify. "
@@ -928,16 +925,16 @@ else:
 
         # Genre presets stored in session state so buttons update sliders
         PRESETS = {
-            "🎉 Dance Pop":    dict(bpm=120, nrgy=82, dnce=80, db=-4,  val=72, acous=5,  spch=5,  pop=78, live=8,  dur=210),
-            "🎤 Hip Hop":      dict(bpm=88,  nrgy=68, dnce=76, db=-6,  val=48, acous=6,  spch=28, pop=72, live=10, dur=225),
-            "🎸 Rock":         dict(bpm=132, nrgy=90, dnce=48, db=-5,  val=55, acous=7,  spch=4,  pop=60, live=15, dur=235),
-            "🎹 Acoustic Pop": dict(bpm=108, nrgy=40, dnce=56, db=-9,  val=62, acous=78, spch=4,  pop=65, live=9,  dur=218),
-            "🌊 EDM":          dict(bpm=128, nrgy=92, dnce=84, db=-4,  val=65, acous=3,  spch=5,  pop=68, live=6,  dur=240),
-            "🎷 R&B":          dict(bpm=94,  nrgy=58, dnce=72, db=-7,  val=56, acous=22, spch=12, pop=70, live=11, dur=220),
+            "Dance Pop":    dict(bpm=120, nrgy=82, dnce=80, db=-4,  val=72, acous=5,  spch=5,  pop=78, live=8,  dur=210),
+            "Hip Hop":      dict(bpm=88,  nrgy=68, dnce=76, db=-6,  val=48, acous=6,  spch=28, pop=72, live=10, dur=225),
+            "Rock":         dict(bpm=132, nrgy=90, dnce=48, db=-5,  val=55, acous=7,  spch=4,  pop=60, live=15, dur=235),
+            "Acoustic":     dict(bpm=108, nrgy=40, dnce=56, db=-9,  val=62, acous=78, spch=4,  pop=65, live=9,  dur=218),
+            "EDM":          dict(bpm=128, nrgy=92, dnce=84, db=-4,  val=65, acous=3,  spch=5,  pop=68, live=6,  dur=240),
+            "R&B":          dict(bpm=94,  nrgy=58, dnce=72, db=-7,  val=56, acous=22, spch=12, pop=70, live=11, dur=220),
         }
 
         if "pred" not in st.session_state:
-            st.session_state.pred = PRESETS["🎉 Dance Pop"]
+            st.session_state.pred = PRESETS["Dance Pop"]
 
         st.markdown('<div style="font-size:0.75rem;color:#666;margin-bottom:6px">Quick presets</div>',
                     unsafe_allow_html=True)
@@ -1024,7 +1021,6 @@ else:
                 xaxis=dict(tickformat=".0%",
                            range=[0, min(1.15, result["Confidence"].max() * 1.35)],
                            gridcolor="#2a2a2a"),
-                title="Top 6 Genre Predictions",
                 showlegend=False,
             )
             chart(fig, height=340)
