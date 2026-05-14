@@ -211,12 +211,10 @@ def kpi(label, value, sub=None):
     </div>"""
 
 def section(title, subtitle=""):
-    sub = f'<div style="color:#666;font-size:0.75rem;margin-top:3px;line-height:1.4">{subtitle}</div>' if subtitle else ""
+    sub = f'<div style="color:#666;font-size:0.75rem;margin-top:4px;line-height:1.4">{subtitle}</div>' if subtitle else ""
     st.markdown(f"""
-    <div style="margin:14px 0 16px 0">
-      <div style="font-size:0.6rem;color:{GREEN};letter-spacing:0.16em;font-weight:700;
-                  margin-bottom:4px">— SECTION</div>
-      <div style="font-size:1.1rem;font-weight:700;color:#fff;line-height:1.2;
+    <div style="margin:14px 0 16px 0;padding-left:12px;border-left:2px solid {GREEN}">
+      <div style="font-size:1.05rem;font-weight:700;color:#fff;line-height:1.2;
                   letter-spacing:-0.015em">{title}</div>
       {sub}
     </div>""", unsafe_allow_html=True)
@@ -236,6 +234,24 @@ def chart(fig, height=None, margin=None, **kw):
         layout["height"] = height
     fig.update_layout(**layout)
     st.plotly_chart(fig, use_container_width=True, **kw)
+
+def genre_color_legend(genres, label="Top genres"):
+    """Compact horizontal color key — used in place of overflowing Plotly legends."""
+    swatches = " &nbsp; ".join(
+        f'<span style="display:inline-flex;align-items:center;gap:5px;margin:2px 4px">'
+        f'<span style="width:9px;height:9px;border-radius:2px;background:{GENRE_COLOR.get(g, "#888")}"></span>'
+        f'<span style="color:#bbb">{g}</span></span>'
+        for g in genres
+    )
+    st.markdown(
+        f'<div style="margin:-4px 0 12px 0;padding:8px 10px;background:rgba(255,255,255,0.02);'
+        f'border:1px solid rgba(255,255,255,0.04);border-radius:6px;font-size:0.72rem">'
+        f'<span style="color:#555;font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;'
+        f'margin-right:8px">{label}</span>'
+        f'{swatches}'
+        f'<span style="color:#555;margin-left:6px">· other genres in gray</span></div>',
+        unsafe_allow_html=True,
+    )
 
 # ── Data ──────────────────────────────────────────────────────────────────────
 @st.cache_data
@@ -553,13 +569,20 @@ if "Explore" in page:
         # Cap at 3000 points so the Plotly figure stays lightweight
         df_3d = df.sample(min(3000, len(df)), random_state=42) if len(df) > 3000 else df
 
+        # Color only the top 10 genres distinctly; the rest are neutral gray
+        top10_3d = df_3d["top_genre"].value_counts().nlargest(10).index.tolist()
+        genre_color_legend(top10_3d, label="Top 10 genres")
+
         fig3d = go.Figure()
+        # Draw "other" first so it sits underneath the highlighted genres
         for genre in sorted(df_3d["top_genre"].unique()):
             g = df_3d[df_3d["top_genre"] == genre]
+            is_top = genre in top10_3d
             fig3d.add_trace(go.Scatter3d(
-                x=g[fx], y=g[fy], z=g[fz],
-                mode="markers",
-                marker=dict(size=4, color=GENRE_COLOR[genre], opacity=0.85),
+                x=g[fx], y=g[fy], z=g[fz], mode="markers",
+                marker=dict(size=4 if is_top else 3,
+                            color=GENRE_COLOR[genre] if is_top else "#444",
+                            opacity=0.88 if is_top else 0.35),
                 name=genre,
                 text=g["title"] + " — " + g["artist"],
                 hovertemplate=(
@@ -571,14 +594,14 @@ if "Explore" in page:
                 ),
             ))
         fig3d.update_layout(
-            **PLOT, height=570,
+            **PLOT, height=560,
             scene=dict(
                 xaxis=dict(title=LABELS[fx], backgroundcolor=CARD, gridcolor="#2a2a2a", showbackground=True),
                 yaxis=dict(title=LABELS[fy], backgroundcolor=CARD, gridcolor="#2a2a2a", showbackground=True),
                 zaxis=dict(title=LABELS[fz], backgroundcolor=CARD, gridcolor="#2a2a2a", showbackground=True),
                 bgcolor=BG,
             ),
-            showlegend=False,  # 35-genre legend overflows; rely on hover instead
+            showlegend=False,
         )
         st.plotly_chart(fig3d, use_container_width=True)
         insight("Genres separate where their audio profiles diverge. High-energy electronic genres "
@@ -592,19 +615,25 @@ if "Explore" in page:
         with st.spinner("Computing t-SNE embedding (cached after first run)…"):
             tsne_df = compute_tsne()
 
+        top10_tsne = tsne_df["genre"].value_counts().nlargest(10).index.tolist()
+        genre_color_legend(top10_tsne, label="Top 10 genres")
+
         fig_t = go.Figure()
         for genre in sorted(tsne_df["genre"].unique()):
             g = tsne_df[tsne_df["genre"] == genre]
+            is_top = genre in top10_tsne
             fig_t.add_trace(go.Scatter3d(
                 x=g["x"], y=g["y"], z=g["z"],
                 mode="markers",
-                marker=dict(size=3.5, color=GENRE_COLOR.get(genre, "#888"), opacity=0.88),
+                marker=dict(size=3.5 if is_top else 2.8,
+                            color=GENRE_COLOR.get(genre, "#888") if is_top else "#444",
+                            opacity=0.88 if is_top else 0.32),
                 name=genre,
                 text=g["title"] + " — " + g["artist"],
                 hovertemplate="<b>%{text}</b><extra>" + genre + "</extra>",
             ))
         fig_t.update_layout(
-            **PLOT, height=570,
+            **PLOT, height=560,
             scene=dict(
                 xaxis=dict(title="Component 1", backgroundcolor=CARD, gridcolor="#2a2a2a", showbackground=True),
                 yaxis=dict(title="Component 2", backgroundcolor=CARD, gridcolor="#2a2a2a", showbackground=True),
