@@ -20,6 +20,7 @@
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Key Findings](#key-findings)
+- [What I'd Do Differently With 2026 Tools](#what-id-do-differently-with-2026-tools)
 - [License](#license)
 
 ---
@@ -138,6 +139,12 @@ streamlit run app.py
 - **Music got louder and less acoustic over 60 years.** The trends chart shows acousticness cratering from the 1970s onward as music went electric, while energy peaked with the EDM era of the 2010s.
 - **Class imbalance matters more at scale.** Dance pop has 1,486 songs vs. niche genres with 5–10. Balanced class weighting in Random Forest partially compensates, but more data for rare genres remains the highest-impact improvement.
 - **Decision Tree overfits badly** — 22.8% CV vs higher training accuracy, confirming that ensemble methods (Random Forest) are essential for this problem.
+
+---
+
+## What I'd Do Differently With 2026 Tools
+
+A pre-trained audio embedding model (e.g. CLAP, MERT, or Spotify's internal track embeddings) paired with a contrastive learning objective would almost certainly outperform Random Forest on rare-class genres. The Spotify API features used here are aggregate statistics — energy, danceability, valence — which lose timbral and temporal structure that an embedding-based approach would preserve. A k-NN classifier over those embeddings, combined with a small head fine-tuned on the 35-class label set, is the path I'd take next.
 
 ---
 
