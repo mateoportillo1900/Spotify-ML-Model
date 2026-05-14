@@ -34,12 +34,12 @@ st.markdown("""
   @media (min-width: 769px) { header { visibility: hidden; } }
   .block-container { padding: 1.5rem 2rem 1rem 2rem; }
 
-  /* Top accent bar */
+  /* Top accent bar — subtle gradient line */
   .top-bar {
-    height: 3px;
-    background: linear-gradient(90deg, #1DB954, #158a3e, #1DB954);
-    border-radius: 0 0 2px 2px;
-    margin: -1.5rem -2rem 1.5rem -2rem;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #1DB954 30%, #1DB954 70%, transparent 100%);
+    margin: -1.5rem -2rem 1.75rem -2rem;
+    opacity: 0.85;
   }
 
   /* Tabs */
@@ -190,14 +190,23 @@ PLOT = dict(
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def kpi(label, value, sub=None):
-    sub_html = f'<div style="color:#666;font-size:0.7rem;margin-top:2px">{sub}</div>' if sub else \
-               '<div style="font-size:0.7rem;margin-top:2px">&nbsp;</div>'
+    sub_html = f'<div style="color:#666;font-size:0.7rem;margin-top:3px">{sub}</div>' if sub else \
+               '<div style="font-size:0.7rem;margin-top:3px">&nbsp;</div>'
+    # Auto-shrink long values (e.g. "dance pop") so they fit on one line
+    val_len = len(str(value))
+    val_size = "1.55rem" if val_len <= 7 else ("1.25rem" if val_len <= 11 else "1.05rem")
     return f"""
-    <div style="background:{CARD};border:1px solid {BORDER};border-radius:10px;
-                padding:16px 10px;text-align:center;min-height:96px;
-                display:flex;flex-direction:column;justify-content:center;">
-      <div style="color:#666;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em">{label}</div>
-      <div style="color:{GREEN};font-size:1.55rem;font-weight:700;margin-top:4px;line-height:1.1">{value}</div>
+    <div style="background:linear-gradient(180deg,{CARD} 0%,#181818 100%);
+                border:1px solid {BORDER};border-radius:12px;
+                padding:18px 12px;text-align:center;min-height:104px;
+                display:flex;flex-direction:column;justify-content:center;
+                transition:border-color 0.2s ease;
+                box-shadow:0 1px 0 rgba(255,255,255,0.02) inset">
+      <div style="color:#666;font-size:0.62rem;text-transform:uppercase;
+                  letter-spacing:0.14em;font-weight:600">{label}</div>
+      <div style="color:{GREEN};font-size:{val_size};font-weight:700;
+                  margin-top:6px;line-height:1.1;white-space:nowrap;
+                  overflow:hidden;text-overflow:ellipsis">{value}</div>
       {sub_html}
     </div>"""
 
@@ -289,8 +298,12 @@ GENRE_COLOR = {g: PALETTE[i % len(PALETTE)] for i, g in enumerate(ALL_GENRES)}
 with st.sidebar:
     st.markdown(f"""
     <div style="padding:4px 0 18px 0">
-      <div style="font-size:1.25rem;font-weight:800;color:{GREEN};letter-spacing:-0.01em">🎵 Spotify Intel</div>
-      <div style="font-size:0.7rem;color:#555;margin-top:1px">Spotify Dataset · 1957–2020</div>
+      <div style="font-size:1.15rem;font-weight:800;color:{GREEN};letter-spacing:-0.01em;line-height:1.15">
+        🎵 Spotify Genre<br>Classifier
+      </div>
+      <div style="font-size:0.68rem;color:#555;margin-top:5px;letter-spacing:0.04em">
+        24,993 songs · 35 genres · 1957–2020
+      </div>
     </div>""", unsafe_allow_html=True)
 
     page = st.radio("nav", ["🔍  Explore Data", "🤖  ML Model"],
@@ -318,7 +331,7 @@ with st.sidebar:
                                 label_visibility="collapsed", placeholder="All genres")
     yr_min = int(df_raw["year"].min())
     yr_max = int(df_raw["year"].max())
-    year_range = st.slider("Year", yr_min, yr_max, (2010, yr_max))
+    year_range = st.slider("Year", yr_min, yr_max, (yr_min, yr_max))
 
     st.divider()
     with st.expander("Feature Glossary"):
@@ -343,24 +356,36 @@ df = df_raw[
 ].copy()
 
 # ── Header ────────────────────────────────────────────────────────────────────
-page_title = "🔍 Data Exploration" if "Explore" in page else "🤖 ML Model Results"
+if "Explore" in page:
+    page_title    = "Data Exploration"
+    page_subtitle = "Interactive analysis of audio features across 35 genres"
+else:
+    page_title    = "ML Model Results"
+    page_subtitle = "Random Forest classifier · 35.18% accuracy on held-out test set"
+
 st.markdown(f"""
-<div class="mobile-header" style="display:flex;align-items:flex-start;justify-content:space-between;
-            margin-bottom:18px;flex-wrap:wrap;gap:10px">
-  <div>
-    <div style="font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2">{page_title}</div>
-    <div style="color:#555;font-size:0.82rem;margin-top:3px">
-      {len(df):,} songs &nbsp;·&nbsp; {df["top_genre"].nunique()} genres &nbsp;·&nbsp;
+<div class="mobile-header" style="display:flex;align-items:center;justify-content:space-between;
+            margin-bottom:22px;flex-wrap:wrap;gap:14px;
+            padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.06)">
+  <div style="flex:1;min-width:260px">
+    <div style="font-size:1.8rem;font-weight:800;letter-spacing:-0.025em;line-height:1.15;color:#fff">
+      {page_title}
+    </div>
+    <div style="color:#888;font-size:0.86rem;margin-top:5px;font-weight:400;line-height:1.4">
+      {page_subtitle}
+    </div>
+    <div style="color:#555;font-size:0.7rem;margin-top:10px;letter-spacing:0.12em;font-weight:600">
+      {len(df):,} SONGS &nbsp;·&nbsp; {df["top_genre"].nunique()} GENRES &nbsp;·&nbsp;
       {year_range[0]}–{year_range[1]}
     </div>
   </div>
   <a href="https://github.com/mateoportillo1900/Spotify-ML-Model" target="_blank"
-     style="display:inline-flex;align-items:center;gap:7px;
-            background:#1a1a1a;border:1px solid #333;border-radius:8px;
-            padding:7px 14px;text-decoration:none;color:#ccc;font-size:0.78rem;
-            font-weight:500;white-space:nowrap;margin-top:4px;
-            transition:border-color 0.2s">
-    <svg height="16" viewBox="0 0 16 16" width="16" fill="#ccc">
+     style="display:inline-flex;align-items:center;gap:8px;
+            background:rgba(29,185,84,0.08);border:1px solid rgba(29,185,84,0.35);
+            border-radius:8px;padding:9px 16px;text-decoration:none;
+            color:#1DB954;font-size:0.8rem;font-weight:600;white-space:nowrap;
+            transition:all 0.2s">
+    <svg height="16" viewBox="0 0 16 16" width="16" fill="#1DB954">
       <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
                0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
                -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
