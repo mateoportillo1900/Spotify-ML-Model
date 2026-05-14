@@ -211,18 +211,22 @@ def kpi(label, value, sub=None):
     </div>"""
 
 def section(title, subtitle=""):
-    sub = f'<div style="color:#666;font-size:0.78rem;margin-top:1px">{subtitle}</div>' if subtitle else ""
+    sub = f'<div style="color:#666;font-size:0.75rem;margin-top:3px;line-height:1.4">{subtitle}</div>' if subtitle else ""
     st.markdown(f"""
-    <div style="display:flex;align-items:flex-start;gap:10px;margin:12px 0 14px 0">
-      <div style="width:3px;min-height:28px;background:{GREEN};border-radius:2px;margin-top:4px;flex-shrink:0"></div>
-      <div>
-        <div style="font-size:1.05rem;font-weight:700;color:#F0F0F0;line-height:1.2">{title}</div>
-        {sub}
-      </div>
+    <div style="margin:14px 0 16px 0">
+      <div style="font-size:0.6rem;color:{GREEN};letter-spacing:0.16em;font-weight:700;
+                  margin-bottom:4px">— SECTION</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#fff;line-height:1.2;
+                  letter-spacing:-0.015em">{title}</div>
+      {sub}
     </div>""", unsafe_allow_html=True)
 
 def insight(text):
-    st.markdown(f'<div class="insight">💡 {text}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="insight"><span style="color:#1DB954;font-weight:700;'
+        f'letter-spacing:0.16em;font-size:0.62rem">INSIGHT &nbsp;</span>{text}</div>',
+        unsafe_allow_html=True,
+    )
 
 def chart(fig, height=None, margin=None, **kw):
     layout = {**PLOT}
@@ -297,29 +301,24 @@ GENRE_COLOR = {g: PALETTE[i % len(PALETTE)] for i, g in enumerate(ALL_GENRES)}
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(f"""
-    <div style="padding:4px 0 18px 0">
-      <div style="font-size:1.15rem;font-weight:800;color:{GREEN};letter-spacing:-0.01em;line-height:1.15">
-        🎵 Spotify Genre<br>Classifier
+    <div style="padding:4px 0 20px 0;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="width:6px;height:6px;border-radius:50%;background:{GREEN};
+                    box-shadow:0 0 8px {GREEN}"></div>
+        <div style="font-size:0.62rem;color:{GREEN};letter-spacing:0.18em;font-weight:700">
+          LIVE MODEL
+        </div>
       </div>
-      <div style="font-size:0.68rem;color:#555;margin-top:5px;letter-spacing:0.04em">
-        24,993 songs · 35 genres · 1957–2020
+      <div style="font-size:1.35rem;font-weight:800;color:#fff;letter-spacing:-0.02em;line-height:1.1">
+        Genre<br>Classifier
+      </div>
+      <div style="font-size:0.7rem;color:#666;margin-top:8px;line-height:1.5">
+        Random Forest trained on 24,993 Spotify songs
       </div>
     </div>""", unsafe_allow_html=True)
 
-    page = st.radio("nav", ["🔍  Explore Data", "🤖  ML Model"],
+    page = st.radio("nav", ["Explore Data", "ML Model"],
                     label_visibility="collapsed")
-
-    st.divider()
-    st.markdown(f"""
-    <div style="font-size:0.78rem;color:#aaa;line-height:1.65;margin-bottom:14px">
-      This app explores <b style="color:#fff">24,993 Spotify songs</b> across
-      <b style="color:#fff">35 genres</b> (1957–2020) and trains a
-      <b style="color:#fff">Random Forest classifier</b> to predict genre
-      from audio features like energy, danceability, and speechiness.<br><br>
-      Use <b style="color:{GREEN}">Explore Data</b> to understand the dataset,
-      then switch to <b style="color:{GREEN}">ML Model</b> to see how the
-      classifier was built, evaluated, and what it gets right and wrong.
-    </div>""", unsafe_allow_html=True)
 
     st.divider()
     st.markdown('<div style="font-size:0.65rem;color:#555;text-transform:uppercase;'
@@ -417,20 +416,22 @@ st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
 # ══════════════════════════════════════════════════════════════════════════════
 if "Explore" in page:
     st.markdown(f"""
-    <div style="background:{CARD};border:1px solid {BORDER};border-radius:10px;
-                padding:16px 20px;margin-bottom:18px;line-height:1.7;font-size:0.83rem;color:#bbb">
-      <b style="color:#fff;font-size:0.9rem">About the dataset</b><br>
-      The data combines <b style="color:#fff">Billboard Top Songs (2010–2019)</b> with the
-      <b style="color:#fff">TidyTuesday Spotify dataset (1957–2020)</b>, giving 24,993 songs
-      across 35 genres. Every song has 10 audio features extracted directly from the Spotify API —
-      no subjective labels, just signal from the track itself.
-      Use the <b style="color:{GREEN}">sidebar filters</b> to zoom into specific genres or eras.
-      The tabs below let you explore genre distributions, rotate a 3D feature space,
-      compare audio fingerprints across genres, and trace how music's sound has shifted over 60 years.
+    <div style="margin:8px 0 22px 0;padding:0 0 0 18px;
+                border-left:2px solid {GREEN};font-family:Georgia,serif">
+      <div style="font-size:1.1rem;color:#eee;line-height:1.45;font-style:italic;
+                  font-weight:400;letter-spacing:-0.01em">
+        Every song is a 10-dimensional point in audio space — tempo, energy, valence,
+        speechiness — sampled directly from Spotify's API. The question is whether genre
+        labels actually live in that space, or whether they're cultural artifacts no signal can find.
+      </div>
+      <div style="font-size:0.7rem;color:#666;margin-top:10px;
+                  letter-spacing:0.14em;font-family:system-ui">
+        BILLBOARD TOP SONGS + TIDYTUESDAY SPOTIFY &nbsp;·&nbsp; 1957–2020
+      </div>
     </div>""", unsafe_allow_html=True)
 
     t1, t2, t3, t4, t5 = st.tabs([
-        "📊  Overview", "🌐  3D Space", "🎯  Genre Profiles", "📈  Trends", "🔎  Songs",
+        "Overview", "3D Space", "Genre Profiles", "Trends", "Songs",
     ])
 
     # ── Overview ──────────────────────────────────────────────────────────────
@@ -438,14 +439,16 @@ if "Explore" in page:
         left, right = st.columns(2)
 
         with left:
-            section("Genre Distribution", "How many Billboard charting songs belong to each genre")
+            section("Genre Distribution", "How many songs belong to each genre — dominant on top")
             gc = df["top_genre"].value_counts().reset_index()
             gc.columns = ["Genre", "Songs"]
             top_pct = gc.iloc[0]["Songs"] / len(df) * 100
-            fig = px.bar(gc, x="Songs", y="Genre", orientation="h",
-                         color="Genre", color_discrete_map=GENRE_COLOR,
-                         text="Songs")
-            fig.update_traces(textposition="outside")
+            # Single-color bars with the top genre highlighted — cleaner than a rainbow
+            top_genre_name = gc.iloc[0]["Genre"]
+            bar_colors = [GREEN if g == top_genre_name else "#3a3a3a" for g in gc["Genre"]]
+            fig = px.bar(gc, x="Songs", y="Genre", orientation="h", text="Songs")
+            fig.update_traces(marker_color=bar_colors, textposition="outside",
+                              textfont=dict(size=10, color="#666"))
             fig.update_layout(yaxis={"categoryorder": "total ascending"},
                               showlegend=False)
             chart(fig, height=480)
@@ -670,25 +673,25 @@ if "Explore" in page:
 # ══════════════════════════════════════════════════════════════════════════════
 else:
     st.markdown(f"""
-    <div style="background:{CARD};border:1px solid {BORDER};border-radius:10px;
-                padding:16px 20px;margin-bottom:18px;line-height:1.7;font-size:0.83rem;color:#bbb">
-      <b style="color:#fff;font-size:0.9rem">About the model</b><br>
-      Three supervised classifiers were compared using <b style="color:#fff">4-fold cross-validation</b>
-      on 17,455 training songs across 35 genres.
-      <b style="color:#fff">Logistic Regression</b> achieved the best CV score (43.7%) but relies heavily
-      on artist identity — it essentially memorises which artists belong to which genres.
-      <b style="color:{GREEN}">Random Forest</b> (40.8% CV, 42.4% test) was selected as the final model
-      because it generalises more robustly to unseen artists and handles class imbalance better with
-      <b style="color:#fff">balanced class weighting</b>. Parameters were tuned via GridSearchCV
-      (200 trees, min_samples_split=5). The random baseline for 35 genres is 2.9% —
-      the model is <b style="color:#fff">12× better than chance</b>.
+    <div style="margin:8px 0 22px 0;padding:0 0 0 18px;
+                border-left:2px solid {GREEN};font-family:Georgia,serif">
+      <div style="font-size:1.1rem;color:#eee;line-height:1.45;font-style:italic;
+                  font-weight:400;letter-spacing:-0.01em">
+        The honest accuracy isn't 84% — it's 35%. The earlier number was inflated by
+        artist identity leaking into predictions. Strip that out, train on audio alone,
+        and the model still beats random by twelve times across thirty-five genres.
+      </div>
+      <div style="font-size:0.7rem;color:#666;margin-top:10px;
+                  letter-spacing:0.14em;font-family:system-ui">
+        RANDOM FOREST &nbsp;·&nbsp; 4-FOLD CV &nbsp;·&nbsp; CLASS-BALANCED &nbsp;·&nbsp; AUDIO FEATURES ONLY
+      </div>
     </div>""", unsafe_allow_html=True)
 
     with st.spinner("Loading model…"):
         pipe, fi_df, y_te, y_pred, y_all = train_model()
 
     t1, t2, t3, t4 = st.tabs([
-        "📊  Performance", "🔬  Feature Analysis", "🗺  Predictions", "🎵  Genre Predictor",
+        "Performance", "Feature Analysis", "Predictions", "Genre Predictor",
     ])
 
     # ── Performance ───────────────────────────────────────────────────────────
