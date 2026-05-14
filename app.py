@@ -743,9 +743,9 @@ else:
                 border-left:2px solid {GREEN};font-family:Georgia,serif">
       <div style="font-size:1.1rem;color:#eee;line-height:1.45;font-style:italic;
                   font-weight:400;letter-spacing:-0.01em">
-        The honest accuracy isn't 84% — it's 35%. The earlier number was inflated by
-        artist identity leaking into predictions. Strip that out, train on audio alone,
-        and the model still beats random by twelve times across thirty-five genres.
+        Random guessing across thirty-five genres gets you 2.9%. This model gets to 35%
+        on audio alone — no artist identity, no metadata shortcuts. Twelve times better
+        than chance, on a problem where the labels themselves often disagree.
       </div>
       <div style="font-size:0.7rem;color:#666;margin-top:10px;
                   letter-spacing:0.14em;font-family:system-ui">
@@ -805,10 +805,10 @@ else:
             st.markdown(f"""
             <div style="background:{CARD};border:1px solid {BORDER};border-left:3px solid {GREEN};
                         border-radius:8px;padding:14px 16px;font-size:0.8rem;color:#aaa;margin-top:16px;line-height:1.6">
-              Going from 17 to 35 genres made this a much harder problem — accuracy dropped from 84% to 42%,
-              but that's expected and honest. The old 84% was partly inflated by the model memorising
-              artist→genre mappings on only 600 songs. At 25k songs and 35 genres, the model is learning
-              real audio patterns.
+              35 genres on 25,000 songs is a genuinely difficult classification problem — random
+              guessing scores 2.9%. The model uses <b style="color:#fff">only audio signal</b> (no artist
+              identity, no metadata) and still recovers genre <b style="color:#fff">12× better than chance</b>,
+              with most error concentrated in genres that overlap sonically (pop ↔ dance pop ↔ electropop).
             </div>""", unsafe_allow_html=True)
 
     # ── Feature Analysis ──────────────────────────────────────────────────────
