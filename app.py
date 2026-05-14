@@ -333,7 +333,7 @@ with st.sidebar:
       </div>
     </div>""", unsafe_allow_html=True)
 
-    page = st.radio("nav", ["Explore Data", "ML Model"],
+    page = st.radio("nav", ["Explore Data", "ML Model", "About"],
                     label_visibility="collapsed")
 
     st.divider()
@@ -394,7 +394,8 @@ def hero_waveform_svg():
         + "".join(bars) + '</svg>'
     )
 
-st.markdown(f"""
+if "About" not in page:
+    st.markdown(f"""
 <div style="margin:0 0 22px 0;border-radius:10px;overflow:hidden;
             background:#0d0d0d;border:1px solid rgba(29,185,84,0.18)">
   <div style="padding:20px 24px;display:flex;align-items:center;
@@ -439,7 +440,9 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ── Breadcrumb strip: page label + filter summary + GitHub link ──────────────
-page_label = "Data Exploration" if "Explore" in page else "ML Model Results"
+page_label = ("Data Exploration" if "Explore" in page
+              else "ML Model Results"  if "ML"      in page
+              else "About the Project")
 is_filtered = bool(sel_genres_raw) or year_range != (yr_min, yr_max)
 filter_text = (f"{len(df):,} of {len(df_raw):,} songs"
                if is_filtered else f"all {len(df_raw):,} songs")
@@ -473,18 +476,19 @@ st.markdown(f"""
   </a>
 </div>""", unsafe_allow_html=True)
 
-c1, c2, c3, c4, c5 = st.columns(5)
-dominant = df["top_genre"].value_counts().index[0] if len(df) else "—"
-for col, lbl, val, sub in [
-    (c1, "Songs",           f"{len(df):,}",                 None),
-    (c2, "Genres",          str(df["top_genre"].nunique()),  None),
-    (c3, "Avg Energy",      f"{df['nrgy'].mean():.0f}",      "out of 100"),
-    (c4, "Avg Popularity",  f"{df['pop'].mean():.0f}",       "out of 100"),
-    (c5, "Top Genre",       dominant[:12] + ("…" if len(dominant) > 12 else ""), None),
-]:
-    col.markdown(kpi(lbl, val, sub), unsafe_allow_html=True)
+if "About" not in page:
+    c1, c2, c3, c4, c5 = st.columns(5)
+    dominant = df["top_genre"].value_counts().index[0] if len(df) else "—"
+    for col, lbl, val, sub in [
+        (c1, "Songs",           f"{len(df):,}",                 None),
+        (c2, "Genres",          str(df["top_genre"].nunique()),  None),
+        (c3, "Avg Energy",      f"{df['nrgy'].mean():.0f}",      "out of 100"),
+        (c4, "Avg Popularity",  f"{df['pop'].mean():.0f}",       "out of 100"),
+        (c5, "Top Genre",       dominant[:12] + ("…" if len(dominant) > 12 else ""), None),
+    ]:
+        col.markdown(kpi(lbl, val, sub), unsafe_allow_html=True)
 
-st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: EXPLORE
@@ -569,9 +573,19 @@ if "Explore" in page:
         # Cap at 3000 points so the Plotly figure stays lightweight
         df_3d = df.sample(min(3000, len(df)), random_state=42) if len(df) > 3000 else df
 
-        # Color only the top 10 genres distinctly; the rest are neutral gray
-        top10_3d = df_3d["top_genre"].value_counts().nlargest(10).index.tolist()
-        genre_color_legend(top10_3d, label="Top 10 genres")
+        # User-controlled highlight: which genres to show in full color
+        default_top10 = df_3d["top_genre"].value_counts().nlargest(10).index.tolist()
+        all_3d_genres = sorted(df_3d["top_genre"].unique())
+        highlight_3d  = st.multiselect(
+            "Highlight genres (others stay gray for context)",
+            all_3d_genres,
+            default=default_top10,
+            key="3d_highlight",
+        )
+        if not highlight_3d:
+            highlight_3d = default_top10  # never go fully empty
+        top10_3d = highlight_3d
+        genre_color_legend(top10_3d, label="Highlighted")
 
         fig3d = go.Figure()
         # Draw "other" first so it sits underneath the highlighted genres
@@ -763,7 +777,7 @@ if "Explore" in page:
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: ML MODEL
 # ══════════════════════════════════════════════════════════════════════════════
-else:
+elif "ML" in page:
     st.markdown(f"""
     <div style="margin:8px 0 22px 0;padding:0 0 0 18px;
                 border-left:2px solid {GREEN};font-family:Georgia,serif">
@@ -1058,3 +1072,260 @@ else:
                 "Try cranking Speechiness above 25 for hip hop, Acousticness above 70 for acoustic pop, "
                 "or BPM=128 + Energy=92 + Danceability=84 for EDM. Use the preset buttons to jump to "
                 "known genre profiles.")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: ABOUT
+# ══════════════════════════════════════════════════════════════════════════════
+else:
+    st.markdown(f"""
+    <div style="margin:8px 0 26px 0;padding:0 0 0 18px;
+                border-left:2px solid {GREEN};font-family:Georgia,serif">
+      <div style="font-size:1.1rem;color:#eee;line-height:1.45;font-style:italic;
+                  font-weight:400;letter-spacing:-0.01em">
+        A walk-through of how this was built, what worked, what didn't, and what I'd
+        do differently with 2026 tooling. Honest documentation matters more than a
+        flattering accuracy number.
+      </div>
+      <div style="font-size:0.7rem;color:#666;margin-top:10px;
+                  letter-spacing:0.14em;font-family:system-ui">
+        METHODOLOGY &nbsp;·&nbsp; LIMITATIONS &nbsp;·&nbsp; TECH STACK
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── The problem & dataset ─────────────────────────────────────────────────
+    section("The Problem",
+            "Multi-class genre classification from audio features only")
+    st.markdown(f"""
+    <div style="font-size:0.88rem;color:#bbb;line-height:1.65;margin-bottom:18px">
+    Given Spotify's per-track audio statistics — tempo, energy, danceability,
+    acousticness, speechiness, valence, loudness, liveness, popularity, duration —
+    can a model recover the genre label?<br><br>
+    The challenge is structural: genre labels are <b style="color:#fff">cultural categories</b>,
+    not acoustic ones. "Dance pop" and "electropop" overlap heavily in feature space.
+    Random baseline for 35 classes is just <b style="color:#fff">2.9%</b>, so any meaningful
+    signal counts.
+    </div>
+    """, unsafe_allow_html=True)
+
+    section("Dataset",
+            "Two public sources merged — 24,993 songs spanning 1957–2020")
+    d1, d2 = st.columns(2)
+    d1.markdown(f"""
+    <div style="background:{CARD};border:1px solid {BORDER};border-radius:8px;padding:14px 16px">
+      <div style="font-size:0.6rem;color:{GREEN};letter-spacing:0.14em;font-weight:700;
+                  margin-bottom:6px">SOURCE 1</div>
+      <div style="font-size:0.95rem;color:#fff;font-weight:700">Billboard Top Songs</div>
+      <div style="font-size:0.78rem;color:#888;margin-top:6px;line-height:1.55">
+        603 songs · 2010–2019 · Originally from Kaggle / Billboard year-end charts.
+        Provided the seed audio features in the 0–100 scale.
+      </div>
+    </div>""", unsafe_allow_html=True)
+    d2.markdown(f"""
+    <div style="background:{CARD};border:1px solid {BORDER};border-radius:8px;padding:14px 16px">
+      <div style="font-size:0.6rem;color:{GREEN};letter-spacing:0.14em;font-weight:700;
+                  margin-bottom:6px">SOURCE 2</div>
+      <div style="font-size:0.95rem;color:#fff;font-weight:700">TidyTuesday Spotify</div>
+      <div style="font-size:0.78rem;color:#888;margin-top:6px;line-height:1.55">
+        32,833 songs · 1957–2020 · Pulled from the Spotify Web API.
+        Required column-mapping and 0–1 → 0–100 rescaling to merge cleanly.
+      </div>
+    </div>""", unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
+    section("Pipeline",
+            "How a raw CSV becomes a deployed classifier")
+    st.markdown(f"""
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+
+      <div style="display:flex;align-items:center;gap:14px;background:{CARD};
+                  border:1px solid {BORDER};border-radius:8px;padding:12px 16px">
+        <div style="width:24px;height:24px;border-radius:50%;background:rgba(29,185,84,0.12);
+                    color:{GREEN};display:flex;align-items:center;justify-content:center;
+                    font-size:0.7rem;font-weight:700;flex-shrink:0">01</div>
+        <div style="flex:1">
+          <div style="font-size:0.88rem;color:#fff;font-weight:600">Load &amp; clean</div>
+          <div style="font-size:0.76rem;color:#888;margin-top:2px">
+            Merge two CSVs, strip column whitespace, drop classes with &lt;5 samples
+            (final: 35 genres). Filtered dataset = 24,936 songs.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:14px;background:{CARD};
+                  border:1px solid {BORDER};border-radius:8px;padding:12px 16px">
+        <div style="width:24px;height:24px;border-radius:50%;background:rgba(29,185,84,0.12);
+                    color:{GREEN};display:flex;align-items:center;justify-content:center;
+                    font-size:0.7rem;font-weight:700;flex-shrink:0">02</div>
+        <div style="flex:1">
+          <div style="font-size:0.88rem;color:#fff;font-weight:600">Preprocess</div>
+          <div style="font-size:0.76rem;color:#888;margin-top:2px">
+            <code>SimpleImputer(strategy=median)</code> → <code>StandardScaler</code>.
+            Wrapped in a sklearn Pipeline so the transformer fits on train only and
+            applies cleanly at inference time.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:14px;background:{CARD};
+                  border:1px solid {BORDER};border-radius:8px;padding:12px 16px">
+        <div style="width:24px;height:24px;border-radius:50%;background:rgba(29,185,84,0.12);
+                    color:{GREEN};display:flex;align-items:center;justify-content:center;
+                    font-size:0.7rem;font-weight:700;flex-shrink:0">03</div>
+        <div style="flex:1">
+          <div style="font-size:0.88rem;color:#fff;font-weight:600">Train / Test Split</div>
+          <div style="font-size:0.76rem;color:#888;margin-top:2px">
+            70/30 stratified split, <code>random_state=123</code>. Stratification is
+            essential here — naïve random sampling would underrepresent rare genres in test.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:14px;background:{CARD};
+                  border:1px solid {BORDER};border-radius:8px;padding:12px 16px">
+        <div style="width:24px;height:24px;border-radius:50%;background:rgba(29,185,84,0.12);
+                    color:{GREEN};display:flex;align-items:center;justify-content:center;
+                    font-size:0.7rem;font-weight:700;flex-shrink:0">04</div>
+        <div style="flex:1">
+          <div style="font-size:0.88rem;color:#fff;font-weight:600">Benchmark via 4-fold CV</div>
+          <div style="font-size:0.76rem;color:#888;margin-top:2px">
+            Compared Logistic Regression, Random Forest, Decision Tree. SVM excluded
+            (O(n²) blow-up at 25k samples). LR scored highest on CV but relied on
+            artist features — see <b style="color:{GREEN}">Limitations</b> below.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:14px;background:{CARD};
+                  border:1px solid {BORDER};border-radius:8px;padding:12px 16px">
+        <div style="width:24px;height:24px;border-radius:50%;background:rgba(29,185,84,0.12);
+                    color:{GREEN};display:flex;align-items:center;justify-content:center;
+                    font-size:0.7rem;font-weight:700;flex-shrink:0">05</div>
+        <div style="flex:1">
+          <div style="font-size:0.88rem;color:#fff;font-weight:600">Tune &amp; deploy</div>
+          <div style="font-size:0.76rem;color:#888;margin-top:2px">
+            Random Forest with <code>class_weight='balanced'</code>, <code>max_features='sqrt'</code>,
+            <code>min_samples_leaf=2</code>. Deployed via Streamlit Cloud with
+            <code>@st.cache_resource</code> on the model so training only happens once per cold start.
+          </div>
+        </div>
+      </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    section("Honest Limitations",
+            "Things a reviewer should know before quoting the accuracy number")
+    st.markdown(f"""
+    <div style="background:rgba(255,140,0,0.05);border:1px solid rgba(255,140,0,0.25);
+                border-left:3px solid #FF8C00;border-radius:8px;padding:14px 18px;
+                margin-bottom:18px;line-height:1.65">
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.85rem;color:#fff;font-weight:700;margin-bottom:3px">
+          Genre labels are noisy by definition
+        </div>
+        <div style="font-size:0.8rem;color:#bbb">
+          Spotify's <code>playlist_subgenre</code> labels overlap heavily ("dance pop" ≈ "electropop" ≈ "pop").
+          The "ceiling" for any classifier is bounded by label disagreement that exists in the data itself.
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.85rem;color:#fff;font-weight:700;margin-bottom:3px">
+          Severe class imbalance
+        </div>
+        <div style="font-size:0.8rem;color:#bbb">
+          Dance pop has 1,486 songs; rare genres have 5–10.
+          Balanced class weighting helps but cannot replace more data for the long tail.
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.85rem;color:#fff;font-weight:700;margin-bottom:3px">
+          Sample bias toward chart-toppers
+        </div>
+        <div style="font-size:0.8rem;color:#bbb">
+          Both source datasets sample from popular playlists / Billboard charts.
+          A model trained on Spotify's full catalog (~100M tracks) would see very different distributions.
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.85rem;color:#fff;font-weight:700;margin-bottom:3px">
+          Audio features are aggregate statistics
+        </div>
+        <div style="font-size:0.8rem;color:#bbb">
+          The Spotify API returns per-track means (avg energy, avg valence) — not the time-domain
+          waveform. Temporal and timbral structure is lost. A modern embedding model
+          (CLAP, MERT) would preserve it.
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:0.85rem;color:#fff;font-weight:700;margin-bottom:3px">
+          Streamlit Cloud memory constraints affected hyperparameters
+        </div>
+        <div style="font-size:0.8rem;color:#bbb">
+          The deployed model uses <code>n_estimators=50</code> instead of the GridSearchCV-optimal 200
+          to fit within the 1GB free-tier RAM limit. Local notebook trains the full configuration.
+        </div>
+      </div>
+
+    </div>""", unsafe_allow_html=True)
+
+    section("What I'd Do With 2026 Tools",
+            "Where the obvious next iteration goes")
+    st.markdown(f"""
+    <div style="font-size:0.86rem;color:#bbb;line-height:1.65;margin-bottom:18px">
+    A pre-trained audio embedding model — <b style="color:#fff">CLAP</b>, <b style="color:#fff">MERT</b>,
+    or Spotify's internal track embeddings — paired with a <b style="color:#fff">contrastive learning
+    objective</b> would almost certainly outperform Random Forest on rare-class genres. The Spotify API
+    features used here are aggregate statistics (energy, danceability, valence) that lose timbral and
+    temporal structure an embedding-based approach would preserve. A k-NN classifier over those embeddings,
+    combined with a small head fine-tuned on the 35-class label set, is the path I'd take next.
+    </div>""", unsafe_allow_html=True)
+
+    section("Tech Stack", "")
+    tech = [
+        ("Python 3.11",           "Core language"),
+        ("scikit-learn",          "RF · LR · DT · CV · pipelines"),
+        ("pandas / NumPy",        "Data manipulation"),
+        ("Streamlit",             "Dashboard framework"),
+        ("Plotly",                "Interactive 3D & 2D charts"),
+        ("t-SNE",                 "Dimensionality reduction"),
+        ("GitHub",                "Version control · repo"),
+        ("Streamlit Cloud",       "Deployment"),
+    ]
+    tech_html = "".join(
+        f'<div style="background:{CARD};border:1px solid {BORDER};border-radius:6px;'
+        f'padding:10px 14px"><div style="font-size:0.82rem;color:#fff;font-weight:600">{name}</div>'
+        f'<div style="font-size:0.72rem;color:#777;margin-top:2px">{desc}</div></div>'
+        for name, desc in tech
+    )
+    st.markdown(
+        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px">'
+        f'{tech_html}</div>', unsafe_allow_html=True)
+
+    section("Source", "")
+    st.markdown(f"""
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">
+      <a href="https://github.com/mateoportillo1900/Spotify-ML-Model" target="_blank"
+         style="background:rgba(29,185,84,0.08);border:1px solid rgba(29,185,84,0.35);
+                border-radius:6px;padding:9px 16px;text-decoration:none;color:{GREEN};
+                font-size:0.82rem;font-weight:600">
+        GitHub Repository →
+      </a>
+      <a href="https://github.com/mateoportillo1900/Spotify-ML-Model/blob/main/Spotify_ML_Project.ipynb"
+         target="_blank" style="background:{CARD};border:1px solid {BORDER};
+                border-radius:6px;padding:9px 16px;text-decoration:none;color:#ccc;
+                font-size:0.82rem;font-weight:600">
+        Training Notebook →
+      </a>
+      <a href="https://github.com/mateoportillo1900/Spotify-ML-Model/blob/main/README.md"
+         target="_blank" style="background:{CARD};border:1px solid {BORDER};
+                border-radius:6px;padding:9px 16px;text-decoration:none;color:#ccc;
+                font-size:0.82rem;font-weight:600">
+        Full README →
+      </a>
+    </div>""", unsafe_allow_html=True)
