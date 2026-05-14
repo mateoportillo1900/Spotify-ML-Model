@@ -377,41 +377,45 @@ def hero_waveform_svg():
     )
 
 st.markdown(f"""
-<div style="position:relative;margin:0 0 20px 0;border-radius:10px;overflow:hidden;
-            background:radial-gradient(ellipse at center,rgba(29,185,84,0.06) 0%,transparent 70%);
-            border:1px solid rgba(29,185,84,0.12)">
-  <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.55">
-    {hero_waveform_svg()}
-  </div>
-  <div style="position:relative;padding:18px 22px;display:flex;align-items:center;
-              justify-content:space-between;gap:14px;flex-wrap:wrap">
-    <div>
+<div style="margin:0 0 22px 0;border-radius:10px;overflow:hidden;
+            background:#0d0d0d;border:1px solid rgba(29,185,84,0.18)">
+  <div style="padding:20px 24px;display:flex;align-items:center;
+              justify-content:space-between;gap:20px;flex-wrap:wrap">
+    <div style="flex:1;min-width:260px">
       <div style="font-size:0.6rem;color:{GREEN};letter-spacing:0.22em;
                   font-weight:700">SPOTIFY · MULTI-CLASS CLASSIFICATION</div>
-      <div style="font-size:1.45rem;font-weight:800;color:#fff;letter-spacing:-0.025em;
-                  margin-top:3px;line-height:1.1">
+      <div style="font-size:1.5rem;font-weight:800;color:#fff;letter-spacing:-0.025em;
+                  margin-top:6px;line-height:1.15">
         Can a model learn genre from sound alone?
       </div>
     </div>
-    <div style="display:flex;gap:18px;font-family:Georgia,serif">
+    <div style="display:flex;gap:22px">
       <div style="text-align:right">
-        <div style="font-size:1.3rem;color:{GREEN};font-weight:700;line-height:1">35%</div>
-        <div style="font-size:0.62rem;color:#666;letter-spacing:0.1em;
-                    margin-top:3px;font-family:system-ui">TEST ACCURACY</div>
+        <div style="font-size:1.45rem;color:{GREEN};font-weight:700;line-height:1;
+                    font-family:Georgia,serif">35%</div>
+        <div style="font-size:0.6rem;color:#666;letter-spacing:0.12em;
+                    margin-top:4px;font-weight:600">TEST ACCURACY</div>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.08)"></div>
       <div style="text-align:right">
-        <div style="font-size:1.3rem;color:#fff;font-weight:700;line-height:1">12×</div>
-        <div style="font-size:0.62rem;color:#666;letter-spacing:0.1em;
-                    margin-top:3px;font-family:system-ui">VS. RANDOM</div>
+        <div style="font-size:1.45rem;color:#fff;font-weight:700;line-height:1;
+                    font-family:Georgia,serif">12×</div>
+        <div style="font-size:0.6rem;color:#666;letter-spacing:0.12em;
+                    margin-top:4px;font-weight:600">VS. RANDOM</div>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.08)"></div>
       <div style="text-align:right">
-        <div style="font-size:1.3rem;color:#fff;font-weight:700;line-height:1">35</div>
-        <div style="font-size:0.62rem;color:#666;letter-spacing:0.1em;
-                    margin-top:3px;font-family:system-ui">CLASSES</div>
+        <div style="font-size:1.45rem;color:#fff;font-weight:700;line-height:1;
+                    font-family:Georgia,serif">35</div>
+        <div style="font-size:0.6rem;color:#666;letter-spacing:0.12em;
+                    margin-top:4px;font-weight:600">CLASSES</div>
       </div>
     </div>
+  </div>
+  <div style="height:1px;background:linear-gradient(90deg,transparent,
+              rgba(29,185,84,0.25),transparent)"></div>
+  <div style="background:#0a0a0a;padding:6px 0">
+    {hero_waveform_svg()}
   </div>
 </div>
 """, unsafe_allow_html=True)
