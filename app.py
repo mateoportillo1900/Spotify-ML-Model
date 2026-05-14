@@ -354,6 +354,68 @@ df = df_raw[
     df_raw["year"].between(*year_range)
 ].copy()
 
+# ── Hero waveform — built from actual song energy values ─────────────────────
+@st.cache_data
+def hero_waveform_svg():
+    """SVG audio waveform with bar heights driven by real Spotify energy values."""
+    n_bars = 140
+    vals = df_raw["nrgy"].dropna().sample(n=min(n_bars, len(df_raw)), random_state=42).values
+    bw = 1000 / n_bars
+    bars = []
+    for i, v in enumerate(vals):
+        h  = max(6, (v / 100) * 92 + 4)
+        y  = (100 - h) / 2
+        op = 0.18 + (v / 100) * 0.65
+        bars.append(
+            f'<rect x="{i*bw:.1f}" y="{y:.1f}" width="{bw*0.55:.2f}" '
+            f'height="{h:.1f}" rx="0.6" fill="#1DB954" opacity="{op:.2f}"/>'
+        )
+    return (
+        '<svg width="100%" height="58" viewBox="0 0 1000 100" '
+        'preserveAspectRatio="none" style="display:block">'
+        + "".join(bars) + '</svg>'
+    )
+
+st.markdown(f"""
+<div style="position:relative;margin:0 0 20px 0;border-radius:10px;overflow:hidden;
+            background:radial-gradient(ellipse at center,rgba(29,185,84,0.06) 0%,transparent 70%);
+            border:1px solid rgba(29,185,84,0.12)">
+  <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.55">
+    {hero_waveform_svg()}
+  </div>
+  <div style="position:relative;padding:18px 22px;display:flex;align-items:center;
+              justify-content:space-between;gap:14px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:0.6rem;color:{GREEN};letter-spacing:0.22em;
+                  font-weight:700">SPOTIFY · MULTI-CLASS CLASSIFICATION</div>
+      <div style="font-size:1.45rem;font-weight:800;color:#fff;letter-spacing:-0.025em;
+                  margin-top:3px;line-height:1.1">
+        Can a model learn genre from sound alone?
+      </div>
+    </div>
+    <div style="display:flex;gap:18px;font-family:Georgia,serif">
+      <div style="text-align:right">
+        <div style="font-size:1.3rem;color:{GREEN};font-weight:700;line-height:1">35%</div>
+        <div style="font-size:0.62rem;color:#666;letter-spacing:0.1em;
+                    margin-top:3px;font-family:system-ui">TEST ACCURACY</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,0.08)"></div>
+      <div style="text-align:right">
+        <div style="font-size:1.3rem;color:#fff;font-weight:700;line-height:1">12×</div>
+        <div style="font-size:0.62rem;color:#666;letter-spacing:0.1em;
+                    margin-top:3px;font-family:system-ui">VS. RANDOM</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,0.08)"></div>
+      <div style="text-align:right">
+        <div style="font-size:1.3rem;color:#fff;font-weight:700;line-height:1">35</div>
+        <div style="font-size:0.62rem;color:#666;letter-spacing:0.1em;
+                    margin-top:3px;font-family:system-ui">CLASSES</div>
+      </div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
 # ── Header ────────────────────────────────────────────────────────────────────
 if "Explore" in page:
     page_title    = "Data Exploration"
