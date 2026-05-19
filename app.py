@@ -930,13 +930,70 @@ elif "ML" in page:
 
         with left:
             section("Confusion Matrix — Top 15 Genres",
-                    "Normalized by true class · filtered to 15 most-represented genres for readability")
+                    "Normalized by true class · drill down by selecting True/Predicted below")
             fig = px.imshow(cm_df, text_auto=True, color_continuous_scale="Greens",
                             labels=dict(x="Predicted", y="Actual"), aspect="auto")
             fig.update_layout(xaxis=dict(tickangle=38, tickfont=dict(size=9)),
                               yaxis=dict(tickfont=dict(size=9)),
                               coloraxis_colorbar=dict(thickness=12))
             chart(fig, height=540)
+
+            # ── Drill-down: see the actual misclassified songs ────────────────
+            st.markdown(f"""
+            <div style="font-size:0.62rem;color:{GREEN};letter-spacing:0.14em;font-weight:700;
+                        margin:8px 0 6px 0">DRILL DOWN — SEE THE SONGS</div>""", unsafe_allow_html=True)
+
+            d1, d2 = st.columns(2)
+            true_genre = d1.selectbox("True genre", top15_labels, index=0, key="cm_true",
+                                      label_visibility="visible")
+            # Default to the most-confused predicted genre for this true label
+            row_idx = top15_labels.index(true_genre)
+            row_vals = cm[row_idx].copy()
+            # Find genre most often predicted that is NOT the true one
+            best_wrong_idx = int(np.argsort(row_vals)[::-1][0])
+            if top15_labels[best_wrong_idx] == true_genre and len(row_vals) > 1:
+                best_wrong_idx = int(np.argsort(row_vals)[::-1][1])
+            pred_genre = d2.selectbox(
+                "Predicted as", top15_labels,
+                index=best_wrong_idx, key="cm_pred", label_visibility="visible",
+            )
+
+            # Filter the test set to songs with this true→predicted combination
+            test_idx = y_te[mask_te].index
+            test_titles = df_raw.loc[test_idx, ["title", "artist", "year"] + FEATURES].copy()
+            test_titles["True"] = y_te_top.values
+            test_titles["Predicted"] = y_pred_top
+
+            matches = test_titles[
+                (test_titles["True"] == true_genre) &
+                (test_titles["Predicted"] == pred_genre)
+            ]
+
+            cell_pct = cm_df.loc[true_genre, pred_genre]
+            same = (true_genre == pred_genre)
+            verdict_color = GREEN if same else "#ff8c52"
+            verdict_label = "CORRECT" if same else "MISCLASSIFIED"
+            st.markdown(f"""
+            <div style="background:{CARD};border:1px solid {BORDER};border-left:3px solid {verdict_color};
+                        border-radius:6px;padding:10px 14px;margin:8px 0 10px 0;
+                        font-size:0.78rem;color:#bbb">
+              <span style="color:{verdict_color};font-weight:700">{verdict_label}:</span>
+              <b style="color:#fff">{cell_pct:.0%}</b> of true <b style="color:#fff">{true_genre}</b>
+              songs in the test set were predicted as <b style="color:#fff">{pred_genre}</b>
+              &nbsp;·&nbsp; <b style="color:#fff">{len(matches)}</b> songs match
+            </div>""", unsafe_allow_html=True)
+
+            if len(matches):
+                show = matches[["title", "artist", "year", "nrgy", "dnce", "spch", "acous", "val"]].head(20).copy()
+                show.columns = ["Title", "Artist", "Year", "Energy", "Dance", "Speech", "Acoustic", "Valence"]
+                st.dataframe(show.reset_index(drop=True), use_container_width=True, height=240,
+                             hide_index=True)
+            else:
+                st.markdown(
+                    f'<div style="color:#666;font-size:0.78rem;padding:8px 4px">'
+                    f'No songs in the test set fit this combination.</div>',
+                    unsafe_allow_html=True,
+                )
 
         with right:
             section("Per-Genre Recall — All Genres",
@@ -990,18 +1047,37 @@ elif "ML" in page:
         st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
         p = st.session_state.pred
 
+        # ── Helper: render slider + dataset context line ──────────────────────
+        def slider_with_context(label, lo, hi, value, feat_col, fmt="{:.0f}", help_text=""):
+            v = st.slider(label, lo, hi, value, help=help_text)
+            series = df_raw[feat_col].dropna()
+            pctl = (series < v).mean() * 100
+            med  = series.median()
+            st.markdown(
+                f'<div style="font-size:0.66rem;color:#666;margin:-12px 0 8px 4px;'
+                f'letter-spacing:0.02em">'
+                f'<span style="color:#888">Dataset median <b style="color:#aaa">'
+                f'{fmt.format(med)}</b></span>'
+                f' &nbsp;·&nbsp; '
+                f'<span>Your value is at the '
+                f'<b style="color:{GREEN}">{pctl:.0f}th</b> percentile</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            return v
+
         s1, s2, s3 = st.columns(3)
         with s1:
-            bpm_v  = st.slider("BPM",           60, 210, p["bpm"],  help="Tempo")
-            nrgy_v = st.slider("Energy",          0, 100, p["nrgy"], help="Intensity 0–100")
-            dnce_v = st.slider("Danceability",    0, 100, p["dnce"], help="Rhythm suitability 0–100")
+            bpm_v   = slider_with_context("BPM",          60, 210, p["bpm"],   "bpm",   help_text="Tempo")
+            nrgy_v  = slider_with_context("Energy",        0, 100, p["nrgy"],  "nrgy",  help_text="Intensity 0–100")
+            dnce_v  = slider_with_context("Danceability",  0, 100, p["dnce"],  "dnce",  help_text="Rhythm suitability")
         with s2:
-            db_v   = st.slider("Loudness (dB)", -20,  -1, p["db"],   help="Overall loudness in dB")
-            val_v  = st.slider("Valence",         0, 100, p["val"],  help="Positivity 0–100")
-            acous_v = st.slider("Acousticness",   0, 100, p["acous"],help="Acoustic confidence 0–100")
+            db_v    = slider_with_context("Loudness (dB)", -20, -1, p["db"],   "db",    help_text="Overall loudness in dB")
+            val_v   = slider_with_context("Valence",       0, 100, p["val"],   "val",   help_text="Positivity")
+            acous_v = slider_with_context("Acousticness",  0, 100, p["acous"], "acous", help_text="Acoustic confidence")
         with s3:
-            spch_v = st.slider("Speechiness",     0, 100, p["spch"], help="Spoken word density 0–100")
-            pop_v  = st.slider("Popularity",       0, 100, p["pop"],  help="Spotify popularity 0–100")
+            spch_v  = slider_with_context("Speechiness",   0, 100, p["spch"],  "spch",  help_text="Spoken word density")
+            pop_v   = slider_with_context("Popularity",    0, 100, p["pop"],   "pop",   help_text="Spotify popularity")
 
         st.divider()
 
@@ -1067,6 +1143,79 @@ elif "ML" in page:
                 showlegend=False,
             )
             chart(fig, height=340)
+
+        # ── Why this prediction? Feature alignment with genre profile ─────────
+        st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
+        section("Why this prediction?",
+                f"How each audio feature compares to the typical <b>{top['Genre']}</b> profile")
+
+        # Get the predicted genre's mean profile from the training data
+        df_pred = df_raw[df_raw["top_genre"] == top["Genre"]]
+        EXPLAIN_FEATS = ["bpm", "nrgy", "dnce", "db", "val", "acous", "spch", "pop"]
+        user_values = {"bpm": bpm_v, "nrgy": nrgy_v, "dnce": dnce_v, "db": db_v,
+                       "val": val_v, "acous": acous_v, "spch": spch_v, "pop": pop_v}
+
+        contrib_rows = []
+        for f in EXPLAIN_FEATS:
+            genre_mean = df_pred[f].mean()
+            genre_std  = max(df_pred[f].std(), 1e-6)
+            dataset_mean = df_raw[f].mean()
+            # Standardized deviation: how close user is to genre mean vs dataset mean
+            user_dist_to_genre   = abs(user_values[f] - genre_mean) / genre_std
+            user_dist_to_dataset = abs(user_values[f] - dataset_mean) / genre_std
+            # Positive contribution = user is closer to this genre's profile than to the dataset average
+            contribution = user_dist_to_dataset - user_dist_to_genre
+            contrib_rows.append({
+                "Feature": LABELS[f],
+                "Contribution": contribution,
+                "User": user_values[f],
+                "Genre Avg": round(genre_mean, 1),
+            })
+        contrib_df = pd.DataFrame(contrib_rows).sort_values("Contribution")
+
+        # Color bars: positive contributions = green, negative = red
+        contrib_df["Color"] = contrib_df["Contribution"].apply(
+            lambda c: GREEN if c > 0 else "#ff6b6b"
+        )
+
+        cc1, cc2 = st.columns([1.5, 1])
+        with cc1:
+            fig_c = go.Figure(go.Bar(
+                x=contrib_df["Contribution"],
+                y=contrib_df["Feature"],
+                orientation="h",
+                marker_color=contrib_df["Color"].tolist(),
+                text=[f"{v:+.2f}" for v in contrib_df["Contribution"]],
+                textposition="outside",
+                textfont=dict(size=10, color="#888"),
+            ))
+            fig_c.update_layout(
+                xaxis=dict(title="Alignment with genre profile (σ-units)",
+                           gridcolor="#2a2a2a", zeroline=True, zerolinecolor="#444"),
+                yaxis=dict(tickfont=dict(size=10)),
+                showlegend=False,
+            )
+            chart(fig_c, height=320)
+
+        with cc2:
+            positives = contrib_df[contrib_df["Contribution"] > 0].sort_values("Contribution", ascending=False)
+            negatives = contrib_df[contrib_df["Contribution"] <= 0].sort_values("Contribution")
+            top_pos = positives.iloc[0] if len(positives) else None
+            top_neg = negatives.iloc[0] if len(negatives) else None
+            st.markdown(f"""
+            <div style="background:{CARD};border:1px solid {BORDER};border-radius:8px;
+                        padding:14px 16px;font-size:0.82rem;line-height:1.6;color:#bbb">
+              <div style="font-size:0.62rem;color:{GREEN};letter-spacing:0.14em;font-weight:700;
+                          margin-bottom:8px">READING THIS CHART</div>
+              <div style="margin-bottom:10px"><b style="color:{GREEN}">Green</b> bars: your value
+                aligns with the typical <b style="color:#fff">{top['Genre']}</b> profile —
+                these <i>push toward</i> the prediction.</div>
+              <div style="margin-bottom:10px"><b style="color:#ff6b6b">Red</b> bars: your value
+                deviates from the genre's typical range — these <i>push away</i> from this prediction.</div>
+              {f'<div style="margin-top:12px;padding-top:10px;border-top:1px solid #2a2a2a"><b style="color:#fff">Strongest match:</b> <b style="color:{GREEN}">{top_pos["Feature"]}</b> — your {top_pos["User"]:.0f} vs genre avg {top_pos["Genre Avg"]:.0f}</div>' if top_pos is not None else ''}
+              {f'<div style="margin-top:6px"><b style="color:#fff">Biggest mismatch:</b> <b style="color:#ff6b6b">{top_neg["Feature"]}</b> — your {top_neg["User"]:.0f} vs genre avg {top_neg["Genre Avg"]:.0f}</div>' if top_neg is not None else ''}
+            </div>
+            """, unsafe_allow_html=True)
 
         insight("This model uses <b>audio features only</b> — no artist identity. "
                 "Try cranking Speechiness above 25 for hip hop, Acousticness above 70 for acoustic pop, "
