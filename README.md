@@ -72,9 +72,9 @@ The challenge is structural: **genre labels are cultural categories, not acousti
 
 ```mermaid
 flowchart LR
-    A[Billboard<br/>603 songs] --> M[Merge + Clean]
+    A[Billboard<br/>603 songs] --> M[Merge<br/>24,993 songs · 67 genres]
     B[TidyTuesday<br/>32,833 songs] --> M
-    M --> |drop genres &lt;5| D[24,993 songs<br/>35 genres]
+    M --> |drop genres &lt;5 samples| D[24,936 songs<br/>35 genres]
     D --> P[Impute → Scale]
     P --> S[Stratified 70/30]
     S --> CV[4-Fold CV]
@@ -82,6 +82,7 @@ flowchart LR
     RF --> OUT[35.2% test acc<br/>Deployed]
 
     style M fill:#1DB954,stroke:#1DB954,color:#000
+    style D fill:#1DB954,stroke:#1DB954,color:#000
     style RF fill:#1DB954,stroke:#1DB954,color:#000
     style OUT fill:#1DB954,stroke:#1DB954,color:#000
 ```
@@ -111,9 +112,10 @@ Live interactive dashboard built with Streamlit. Five exploration tabs and four 
 | Property | Value |
 |---|---|
 | Sources | Billboard Top Songs (2010–2019) + TidyTuesday Spotify dataset |
-| Size | 24,993 songs |
+| Raw size | 24,993 songs / 67 genres |
+| After filtering | 24,936 songs / 35 genres (drops 32 genres with <5 samples) |
 | Year range | 1957–2020 |
-| Target classes | 35 genres (after filtering genres with <5 samples) |
+| Train / Test | 17,455 / 7,481 (70/30 stratified) |
 | Audio features | BPM, Energy, Danceability, Loudness, Liveness, Valence, Acousticness, Speechiness, Popularity, Duration |
 
 The dataset is severely long-tailed: dance pop has 1,486 songs while rare genres have 5–10. This is addressed with `class_weight='balanced'` during training so each class contributes equally to the loss regardless of frequency.

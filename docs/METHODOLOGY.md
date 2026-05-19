@@ -2,6 +2,8 @@
 
 A visual walkthrough of how this project was built — the data pipeline, the modeling choices, and the trade-offs behind each decision.
 
+> **Baseline context:** Random guessing across 35 classes scores **2.9%** (1 / 35). All meaningful results should be benchmarked against this. The deployed model at **35.18%** test accuracy is **12× above random**.
+
 ---
 
 ## Table of Contents
@@ -21,9 +23,9 @@ End-to-end pipeline from raw sources to deployed prediction.
 
 ```mermaid
 flowchart LR
-    A[Billboard Top Songs<br/>603 songs · 2010–2019] --> M[Merge + Clean]
+    A[Billboard Top Songs<br/>603 songs · 2010–2019] --> M[Merge<br/>24,993 songs · 67 genres]
     B[TidyTuesday Spotify<br/>32,833 songs · 1957–2020] --> M
-    M --> |drop genres &lt;5 samples| D[Cleaned Dataset<br/>24,993 songs · 35 genres]
+    M --> |drop genres &lt;5 samples<br/>57 songs from 32 rare genres| D[Cleaned Dataset<br/>24,936 songs · 35 genres]
     D --> P[Preprocess]
     P --> |median imputation| P1[Imputed]
     P1 --> |z-score scaling| P2[Scaled]

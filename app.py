@@ -445,7 +445,7 @@ page_label = ("Data Exploration" if "Explore" in page
               else "About the Project")
 is_filtered = bool(sel_genres_raw) or year_range != (yr_min, yr_max)
 filter_text = (f"{len(df):,} of {len(df_raw):,} songs"
-               if is_filtered else f"all {len(df_raw):,} songs")
+               if is_filtered else f"{len(df):,} songs · 35 modelable genres")
 
 st.markdown(f"""
 <div style="display:flex;align-items:center;justify-content:space-between;
